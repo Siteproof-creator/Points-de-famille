@@ -1,0 +1,17 @@
+{
+  "name": "Points de famille",
+  "short_name": "Points",
+  "description": "Gagnez des points en famille, faites valider les tâches et choisissez vos récompenses.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF2F0",
+  "theme_color": "#0B7A64",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
