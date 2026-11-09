@@ -587,7 +587,7 @@ function makeStore(){
   return {collection:function(name){ return {doc:function(id){ return {
     set:async function(d){
       if(name==='photos'){
-        var up=await sb.storage.from('photos').upload(path(id),dataUrlToBlob(d.data),{contentType:'image/jpeg',upsert:true});
+        var up=await sb.storage.from('photos').upload(path(id),dataUrlToBlob(d.data),{contentType:'image/jpeg',upsert:false});
         if(up.error) throw up.error;
         return;
       }
