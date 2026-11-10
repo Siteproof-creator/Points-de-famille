@@ -175,7 +175,7 @@ function tabbar(m){
 }
 function historyItems(mid){
   var e=S.entries.filter(function(x){return x.memberId===mid;}).map(function(x){return {kind:'entries',id:x.id,label:x.label,pts:x.points,status:x.status,ts:x.ts||0};});
-  var r=S.redemptions.filter(function(x){return x.memberId===mid;}).map(function(x){return {kind:'redemptions',id:x.id,label:'Récompense : '+x.label,pts:-x.cost,status:x.status,ts:x.ts||0};});
+  var r=S.redemptions.filter(function(x){return x.memberId===mid;}).map(function(x){return {kind:'redemptions',id:x.id,label:'Récompense : '+x.label,pts:-x.cost,status:x.status,ts:x.ts||0,used:!!x.usedTs};});
   return e.concat(r).sort(function(a,b){return b.ts-a.ts;});
 }
 function historyHtml(mid,opts){
@@ -192,7 +192,7 @@ function historyHtml(mid,opts){
         ? '<div class="mactions"><button class="btn small danger" data-act="delgo" data-kind="'+it.kind+'" data-id="'+esc(it.id)+'">Supprimer</button><button class="btn small" data-act="delcancel">Annuler</button></div>'
         : '<button class="link bad" data-act="delask" data-kind="'+it.kind+'" data-id="'+esc(it.id)+'">Supprimer</button>';
     }
-    return '<li><div class="hrow"><div class="hmain"><div class="hlabel">'+esc(it.label)+'</div><div class="hmeta"><span>'+ago(it.ts)+'</span>'+statusPill(it.status)+(opts.del?del:'')+'</div></div><div class="hpts '+cls+'">'+sg(it.pts)+'</div></div></li>';
+    return '<li><div class="hrow"><div class="hmain"><div class="hlabel">'+esc(it.label)+'</div><div class="hmeta"><span>'+ago(it.ts)+'</span>'+(it.kind==='redemptions'&&it.status==='approved'?'<span class="pill '+(it.used?'approved':'pending')+'">'+(it.used?'Récupérée':'À récupérer')+'</span>':statusPill(it.status))+(opts.del?del:'')+'</div></div><div class="hpts '+cls+'">'+sg(it.pts)+'</div></div></li>';
   }).join('')+'</ul>';
 }
 function lastGains(mid,n){
@@ -207,6 +207,11 @@ function memberReadOnly(m){
     '<div class="hero"><div class="eyebrow">Points disponibles</div><div class="big" style="font-size:64px">'+balance(m.id)+'</div></div>'+
     '<h3>Derniers points gagnés</h3>'+list;
 }
+function prizeCards(m){
+  return S.redemptions.filter(function(r){return r.memberId===m.id&&r.status==='approved'&&!r.usedTs;}).sort(function(a,b){return (a.decidedTs||0)-(b.decidedTs||0);}).map(function(r){
+    return '<section class="card prize"><div class="eyebrow">Bravo !</div><div class="prize-title">'+esc(r.label)+'</div><p class="muted small">Ta récompense est validée. Appuie sur le bouton quand tu l’as eue.</p><button class="btn primary block" data-act="rewardUsed" data-id="'+esc(r.id)+'">Récupérée</button></section>';
+  }).join('');
+}
 function homeSelf(m){
   var bal=balance(m.id), wait=waiting(m.id);
   var rs=S.rewards.slice().sort(function(a,b){return a.cost-b.cost;});
@@ -218,6 +223,7 @@ function homeSelf(m){
   return '<section class="card hero"><div class="eyebrow">Tes points</div><div class="big">'+bal+'</div>'+
     (wait>0?'<p class="muted small">+'+wait+' '+ptsWord(wait)+' en attente de validation</p>':'')+goal+
     '<button class="btn primary block" data-act="openEarn">Gagner des points</button></section>'+
+    prizeCards(m)+
     '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:15})+'</section>';
 }
 function homeAdult(m){
@@ -432,6 +438,9 @@ async function act(name,ds){
     case 'photo': openSheet({type:'photo',id:ds.id}); break;
     case 'adjust': openSheet({type:'adjust',id:ds.id,sign:ds.sign}); break;
     case 'member': openSheet({type:'member',id:ds.id}); break;
+    case 'rewardUsed':
+      if(await w(async function(){ dbErr(await sb.rpc('mark_reward_used',{p_id:ds.id})); })) toast('Parfait, c’est noté.');
+      break;
     case 'delask': sheet.confirm=ds.kind+':'+ds.id; renderSheet(); break;
     case 'delcancel': if(sheet){ sheet.confirm=null; renderSheet(); } break;
     case 'delgo':
@@ -583,7 +592,7 @@ var fromRow={
   tasks:function(r){return {id:r.id,label:r.label,points:r.points,ts:Date.parse(r.created_at)};},
   rewards:function(r){return {id:r.id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
   entries:function(r){return {id:r.id,memberId:r.member_id,taskId:r.task_id,label:r.label,points:r.points,status:r.status,photo:!!r.photo_path,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null};},
-  redemptions:function(r){return {id:r.id,memberId:r.member_id,rewardId:r.reward_id,label:r.label,cost:r.cost,status:r.status,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null};},
+  redemptions:function(r){return {id:r.id,memberId:r.member_id,rewardId:r.reward_id,label:r.label,cost:r.cost,status:r.status,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null,usedTs:r.used_at?Date.parse(r.used_at):null};},
   family:function(r){return {id:'main',code:r.code};}
 };
 function dbErr(r){ if(r&&r.error) throw r.error; return r; }

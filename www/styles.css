@@ -232,3 +232,7 @@ input[type=text],input[type=number],input[type=password],select{background:var(-
 /* classement : lignes cliquables */
 button.rrow{width:100%;background:none;border:0;font:inherit;color:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
 button.rrow .rname{flex:1;min-width:0}
+
+/* récompense validée à récupérer */
+.prize{text-align:center;display:flex;flex-direction:column;gap:10px;border:2px solid var(--gold)}
+.prize-title{font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1.15;text-wrap:balance;overflow-wrap:anywhere}
