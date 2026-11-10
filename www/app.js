@@ -126,6 +126,7 @@ var ICON={
   check:svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>'),
   trophy:svg('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4"/><path d="M12 13v4M8 20h8M10 17h4"/>'),
   gift:svg('<rect x="3" y="8" width="18" height="4"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8c-2 0-4-1-4-3s3-2 4 1c1-3 4-3 4-1s-2 3-4 3z"/>'),
+  user:svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   users:svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5a5 5 0 0 1 4.5 5"/>')
 };
 
@@ -164,7 +165,7 @@ function tabsFor(m){
   var t=[['home','Accueil',ICON.home]];
   if(isAdult(m)) t.push(['approve','À valider',ICON.check]);
   t.push(['rank','Classement',ICON.trophy],['rewards','Récompenses',ICON.gift]);
-  if(isAdult(m)) t.push(['family','Famille',ICON.users]);
+  if(isAdult(m)) t.push(['family','Famille',ICON.users]); else t.push(['me','Moi',ICON.user]);
   return t;
 }
 function tabbar(m){
@@ -222,16 +223,76 @@ function homeSelf(m){
   var bal=balance(m.id), wait=waiting(m.id);
   var rs=S.rewards.slice().sort(function(a,b){return a.cost-b.cost;});
   var next=rs.find(function(r){return r.cost>bal;});
+  var chosen=m.goalId&&rs.find(function(r){return r.id===m.goalId;});
+  if(chosen&&chosen.cost>bal) next=chosen;
   var goal='';
   if(!rs.length) goal='<p class="muted small">Les adultes n’ont pas encore ajouté de récompenses.</p>';
-  else if(next) goal='<div class="goal"><div class="goal-top"><span>Prochaine récompense : <strong>'+esc(next.label)+'</strong></span><strong class="tnum">encore '+(next.cost-bal)+'</strong></div><div class="bar"><i style="width:'+Math.max(0,Math.min(100,bal/next.cost*100))+'%"></i></div></div>';
+  else if(next) goal='<div class="goal"><div class="goal-top"><span>'+(chosen&&next===chosen?'Mon objectif':'Prochaine récompense')+' : <strong>'+esc(next.label)+'</strong></span><strong class="tnum">encore '+(next.cost-bal)+'</strong></div><div class="bar"><i style="width:'+Math.max(0,Math.min(100,bal/next.cost*100))+'%"></i></div></div>';
   else goal='<div class="goal"><p>Tu as assez de points pour toutes les récompenses.</p></div>';
   return '<section class="card hero"><div class="eyebrow">Tes points</div><div class="big">'+bal+'</div>'+
     (wait>0?'<p class="muted small">+'+wait+' '+ptsWord(wait)+' en attente de validation</p>':'')+goal+
     '<button class="btn primary block" data-act="openEarn">Gagner des points</button>'+
     '<button class="btn block" data-act="potNew">Regrouper nos points</button></section>'+
-    prizeCards(m)+potsSection(m)+
-    '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:15})+'</section>';
+    prizeCards(m)+potsSection(m);
+}
+
+/* ---------- onglet « Moi » (enfants) ---------- */
+var LEVELS=[[0,'Apprenti'],[25,'Courageux'],[75,'Costaud'],[150,'Champion'],[300,'Légende']];
+function dayKey(ts){ var d=new Date(ts); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function gainDays(id){
+  var o={}; S.entries.forEach(function(e){ if(e.memberId===id&&e.status==='approved'&&e.points>0) o[dayKey(e.decidedTs||e.ts||0)]=1; });
+  return o;
+}
+function streaks(id){
+  var days=gainDays(id), keys=Object.keys(days);
+  if(!keys.length) return {cur:0,best:0};
+  var DAY=86400000, now=new Date(); now.setHours(12,0,0,0);
+  var cur=0, t=now.getTime();
+  if(!days[dayKey(t)]) t-=DAY;
+  while(days[dayKey(t)]){ cur++; t-=DAY; }
+  var list=keys.map(function(k){var a=k.split('-');return new Date(+a[0],+a[1]-1,+a[2],12).getTime();}).sort(function(a,b){return a-b;});
+  var best=1, run=1;
+  for(var i=1;i<list.length;i++){ run=Math.round((list[i]-list[i-1])/DAY)===1?run+1:1; if(run>best) best=run; }
+  return {cur:cur,best:Math.max(best,cur)};
+}
+function lifetime(id){ return sum(S.entries.filter(function(e){return e.memberId===id&&e.status==='approved'&&e.points>0;}),function(e){return e.points;}); }
+function levelOf(pts){ var i=0; LEVELS.forEach(function(l,k){ if(pts>=l[0]) i=k; }); return i; }
+function badgesOf(m){
+  var gains=S.entries.filter(function(e){return e.memberId===m.id&&e.status==='approved'&&e.points>0;});
+  var st=streaks(m.id), life=lifetime(m.id);
+  var rew=S.redemptions.some(function(r){return r.memberId===m.id&&r.status==='approved';});
+  var team=S.potMembers.some(function(x){return x.memberId===m.id&&x.status==='in';});
+  return [
+    ['★','Première tâche','Gagne ton premier point.',gains.length>=1],
+    ['10','10 tâches','Fais valider 10 tâches.',gains.length>=10],
+    ['100','100 points','Gagne 100 points en tout.',life>=100],
+    ['3j','Série de 3 jours','Gagne des points 3 jours de suite.',st.best>=3],
+    ['7j','Série de 7 jours','Gagne des points 7 jours de suite.',st.best>=7],
+    ['✓','Première récompense','Obtiens ta première récompense.',rew],
+    ['♥','Esprit d’équipe','Participe à une cagnotte.',team]
+  ];
+}
+function meView(m){
+  var life=lifetime(m.id), li=levelOf(life), nx=LEVELS[li+1], st=streaks(m.id);
+  var lvl='<section class="card me-level"><div class="eyebrow">Niveau '+(li+1)+'</div><div class="me-title">'+LEVELS[li][1]+'</div>'+
+    (nx?'<div class="bar"><i style="width:'+Math.max(0,Math.min(100,(life-LEVELS[li][0])/(nx[0]-LEVELS[li][0])*100))+'%"></i></div><p class="muted small">Encore '+(nx[0]-life)+' '+ptsWord(nx[0]-life)+' pour devenir « '+nx[1]+' »</p>'
+        :'<p class="muted small">Niveau maximum atteint, bravo !</p>')+'</section>';
+  var strk='<section class="card me-streak"><div class="eyebrow">Série</div><div class="me-title">'+st.cur+' '+(st.cur>1?'jours':'jour')+' de suite</div><p class="muted small">'+(st.cur?'Continue, gagne des points aujourd’hui !':'Gagne des points aujourd’hui pour lancer ta série.')+' Record : '+st.best+' '+(st.best>1?'jours':'jour')+'.</p></section>';
+  var rs=S.rewards.slice().sort(function(a,b){return a.cost-b.cost;});
+  var g=m.goalId&&rs.find(function(r){return r.id===m.goalId;}), bal=balance(m.id), obj;
+  if(g){
+    obj='<div class="goal-top"><span><strong>'+esc(g.label)+'</strong></span><strong class="tnum">'+(bal>=g.cost?'Tu peux l’avoir !':bal+' / '+g.cost)+'</strong></div><div class="bar"><i style="width:'+Math.max(0,Math.min(100,bal/g.cost*100))+'%"></i></div>'+
+      '<button class="link" data-act="goalClear">Retirer mon objectif</button>';
+  } else if(rs.length){
+    obj='<p class="muted small">Choisis la récompense que tu veux atteindre.</p><div class="chips2">'+rs.map(function(r){return '<button class="btn small" data-act="goalSet" data-id="'+esc(r.id)+'">'+esc(r.label)+' · '+r.cost+'</button>';}).join('')+'</div>';
+  } else obj='<p class="muted small">Les adultes n’ont pas encore ajouté de récompenses.</p>';
+  var bd=badgesOf(m), got=bd.filter(function(b){return b[3];}).length;
+  var badges='<section class="card"><h3>Badges <span class="muted small">'+got+' / '+bd.length+'</span></h3><div class="badges">'+bd.map(function(b){
+    return '<div class="bdg'+(b[3]?' on':'')+'"><div class="bdg-i">'+b[0]+'</div><div class="bdg-t">'+b[1]+'</div><div class="bdg-h">'+(b[3]?'Obtenu':b[2])+'</div></div>';
+  }).join('')+'</div></section>';
+  return '<section class="card" style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+life+' '+ptsWord(life)+' gagnés en tout</span></div></section>'+
+    lvl+strk+'<section class="card"><h3>Mon objectif</h3>'+obj+'</section>'+badges+
+    '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:30})+'</section>';
 }
 function todoItems(){
   var it=[];
@@ -404,6 +465,7 @@ function render(){
   else if(tab==='rank') body=rankView(m);
   else if(tab==='rewards') body=rewardsView(m);
   else if(tab==='family') body=familyView();
+  else if(tab==='me') body=meView(m);
   if(tab==='home') body+=pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
@@ -544,6 +606,12 @@ async function act(name,ds){
       if(await potRpc('delete_pot_reward',{p_pot:sheet.pot,p_id:sheet.id},'Récompense supprimée.')) openSheet({type:'pot',id:sheet.pot});
       break;
     case 'potUsed': await potRpc('mark_pot_used',{p_pot:ds.id},'Parfait, c’est noté.'); break;
+    case 'goalSet':
+      if(await w(async function(){ dbErr(await sb.rpc('set_goal',{p_reward:ds.id})); })) toast('Objectif choisi !');
+      break;
+    case 'goalClear':
+      await w(async function(){ dbErr(await sb.rpc('set_goal',{p_reward:null})); });
+      break;
     case 'rewardUsed':
       if(await w(async function(){ dbErr(await sb.rpc('mark_reward_used',{p_id:ds.id})); })) toast('Parfait, c’est noté.');
       break;
@@ -719,7 +787,7 @@ document.addEventListener('submit',async function(e){
 
 /* ---------- data (Supabase) ---------- */
 var fromRow={
-  members:function(r){return {id:r.id,name:r.name,role:r.role,hue:r.hue,ts:Date.parse(r.created_at)};},
+  members:function(r){return {id:r.id,name:r.name,role:r.role,hue:r.hue,goalId:r.goal_reward_id||null,ts:Date.parse(r.created_at)};},
   tasks:function(r){return {id:r.id,label:r.label,points:r.points,ts:Date.parse(r.created_at)};},
   rewards:function(r){return {id:r.id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
   entries:function(r){return {id:r.id,memberId:r.member_id,taskId:r.task_id,label:r.label,points:r.points,status:r.status,photo:!!r.photo_path,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null};},
