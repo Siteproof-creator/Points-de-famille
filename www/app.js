@@ -133,6 +133,7 @@ var ICON={
 function banners(){
   var h='';
   if(offline) h+='<p class="note">Pas de connexion : les données affichées peuvent ne pas être à jour.</p>';
+  h+=pushBanner();
   return h;
 }
 function loadingHtml(){
@@ -298,6 +299,7 @@ function render(){
   else if(tab==='rank') body=rankView(m);
   else if(tab==='rewards') body=rewardsView(m);
   else if(tab==='family') body=familyView();
+  if(tab==='home') body+=pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
   if(sheet&&sheet.type==='member') renderSheet();
@@ -404,6 +406,9 @@ async function act(name,ds){
     case 'welcome': welcomeMode=ds.m; rerender(); break;
     case 'retry': bootError=''; booted=false; render(); boot(); break;
     case 'deleteFamilyAsk': openSheet({type:'deleteFamily'}); break;
+    case 'pushOn': await pushEnable(); break;
+    case 'pushOff': await pushDisable(); break;
+    case 'pushLater': pushSnooze(); render(); break;
     case 'copyCode':
       var cd=fam()&&fam().code; if(!cd) break;
       try{ await navigator.clipboard.writeText(fmtCode(cd)); toast('Code copié.'); }catch(e){ toast('Code : '+fmtCode(cd)); }
@@ -660,6 +665,7 @@ async function afterLink(t){
   tab=t||'home';
   if(sess){ startData(); await loadAll(); }
   rerender();
+  pushRefreshState(); pushSync();
 }
 async function leaveFamily(){
   var r=await sb.rpc('leave_family');
@@ -675,6 +681,92 @@ async function deleteFamilyData(){
   if(r.error){ toast(r.error.code==='P0001'?r.error.message:"Impossible de supprimer la famille. Réessaie."); return false; }
   stopData(); resetData();
   return true;
+}
+/* ---------- notifications (web push) ---------- */
+var pushState='', pushBusy=false, pushSnoozed=false;
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1); }
+function isStandalone(){ try{ return navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches); }catch(e){ return false; } }
+function pushCapable(){ return !!(CFG.vapidPublicKey&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window); }
+function b64ToBytes(str){ str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4) str+='='; var bin=atob(str), a=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; }
+function pushSnoozedNow(){
+  if(pushSnoozed) return true;
+  try{ var t=+localStorage.getItem('pf-push-later'); return !!t&&Date.now()-t<3*86400000; }catch(e){ return false; }
+}
+function pushSnooze(){ pushSnoozed=true; try{ localStorage.setItem('pf-push-later',String(Date.now())); }catch(e){} }
+async function pushRefreshState(){
+  var st='';
+  if(!CFG.vapidPublicKey) st='';
+  else if(isIOS()&&!isStandalone()) st='install';
+  else if(!pushCapable()) st='';
+  else if(Notification.permission==='denied') st='denied';
+  else {
+    try{
+      var reg=await navigator.serviceWorker.getRegistration();
+      var sub=reg?await reg.pushManager.getSubscription():null;
+      st=(Notification.permission==='granted'&&sub)?'on':'off';
+    }catch(e){ st='off'; }
+  }
+  if(st!==pushState){ pushState=st; render(); }
+}
+async function pushSave(sub){
+  var j=sub.toJSON();
+  var r=await sb.rpc('save_push_subscription',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth});
+  if(r.error) throw r.error;
+}
+/* Rattache l'appareil au profil actuel (après avoir rejoint ou changé de famille). */
+async function pushSync(){
+  try{
+    if(!sess||!pushCapable()||Notification.permission!=='granted') return;
+    var reg=await navigator.serviceWorker.getRegistration();
+    var sub=reg?await reg.pushManager.getSubscription():null;
+    if(sub) await pushSave(sub);
+  }catch(e){}
+}
+async function pushEnable(){
+  if(pushBusy) return;
+  pushBusy=true;
+  try{
+    var perm=await Notification.requestPermission();
+    if(perm!=='granted'){ toast(perm==='denied'?'Notifications refusées. Tu peux les autoriser dans les Réglages du téléphone.':'Notifications non activées.'); return; }
+    var reg=await navigator.serviceWorker.getRegistration();
+    if(!reg) reg=await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(CFG.vapidPublicKey)});
+    await pushSave(sub);
+    toast('Notifications activées.');
+  }catch(e){
+    toast("Impossible d’activer les notifications. Réessaie.");
+  }finally{
+    pushBusy=false; await pushRefreshState(); render();
+  }
+}
+async function pushDisable(){
+  try{
+    var reg=await navigator.serviceWorker.getRegistration();
+    var sub=reg?await reg.pushManager.getSubscription():null;
+    if(sub){
+      try{ await sb.rpc('delete_push_subscription',{p_endpoint:sub.endpoint}); }catch(e){}
+      await sub.unsubscribe();
+    }
+    toast('Notifications désactivées.');
+  }catch(e){ toast('Impossible de désactiver pour le moment.'); }
+  await pushRefreshState(); render();
+}
+function pushBannerShown(){ return !!sess&&!pushSnoozedNow()&&(pushState==='off'||pushState==='install'); }
+function pushBanner(){
+  if(!pushBannerShown()) return '';
+  if(pushState==='off') return '<section class="card pushcard"><h3>Notifications</h3><p class="muted small" style="margin:4px 0 10px">Reçois une alerte quand une demande arrive ou qu’elle est validée.</p><div class="mactions"><button class="btn primary small" data-act="pushOn">Activer</button><button class="btn small" data-act="pushLater">Plus tard</button></div></section>';
+  return '<p class="note">Pour recevoir des notifications sur iPhone, ajoute d’abord l’application à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil »), puis ouvre-la depuis son icône. <button class="link" data-act="pushLater">Masquer</button></p>';
+}
+function pushCard(){
+  if(!pushState||pushBannerShown()) return '';
+  var h='<section class="card"><h3>Notifications</h3>';
+  if(pushState==='on') h+='<p class="muted small" style="margin:4px 0 10px">Activées sur cet appareil.</p><button class="btn small" data-act="pushOff">Désactiver</button>';
+  else if(pushState==='denied') h+='<p class="muted small" style="margin:4px 0 0">Bloquées pour cette application. Autorise-les dans les Réglages du téléphone, rubrique Notifications.</p>';
+  else if(pushState==='install') h+='<p class="muted small" style="margin:4px 0 0">Sur iPhone, ajoute l’application à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil ») et ouvre-la depuis son icône pour activer les notifications.</p>';
+  else h+='<p class="muted small" style="margin:4px 0 10px">Désactivées sur cet appareil.</p><button class="btn primary small" data-act="pushOn">Activer</button>';
+  return h+'</section>';
 }
 async function boot(){
   render();
@@ -697,6 +789,7 @@ async function boot(){
   booted=true;
   if(sess){ startData(); await loadAll(); }
   render();
+  pushRefreshState(); pushSync();
   setTimeout(function(){ if(sess&&!allReady()){ slow=true; render(); } },10000);
 }
 boot();
