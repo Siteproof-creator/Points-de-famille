@@ -3,12 +3,12 @@
 var $app=document.getElementById('app'), $sheet=document.getElementById('sheetRoot'), $toast=document.getElementById('toast');
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
 var uid=function(){try{return crypto.randomUUID();}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});}};
-var COLL=['members','entries','rewards','redemptions','tasks','family'];
+var COLL=['members','entries','rewards','redemptions','tasks','family','pots','potMembers','potRewards'];
 var S={}, ready={};
 COLL.forEach(function(c){S[c]=[];});
 var store=null, sb=null, slow=false, dirty=false, booted=false, bootError='', offline=false, welcomeMode='join', familyId=null, rt=null, poll=null, refreshTimer=null;
 var CFG=window.PF_CONFIG||{};
-var TABLE={members:'members',entries:'entries',rewards:'rewards',redemptions:'redemptions',tasks:'tasks',family:'families'};
+var TABLE={members:'members',entries:'entries',rewards:'rewards',redemptions:'redemptions',tasks:'tasks',family:'families',pots:'pots',potMembers:'pot_members',potRewards:'pot_rewards'};
 var JOIN_ERR={bad_code:'Code de famille incorrect.',no_profile:'Aucun profil à ce prénom. Demande à un adulte de t’ajouter dans l’onglet Famille.',throttled:'Trop d’essais. Réessaie dans quelques minutes.',not_signed_in:'Connexion impossible. Réessaie.'};
 var sess=null, tab='home', rankPeriod='week', sheet=null, toastTimer=null;
 var photoCache={}, photoLoading={}, earnPhoto=null;
@@ -20,9 +20,9 @@ var isAdult=function(m){return !!m && m.role==='adult';};
 var sum=function(a,f){return a.reduce(function(t,x){return t+f(x);},0);};
 var total=function(id){return sum(S.entries.filter(function(e){return e.memberId===id&&e.status==='approved';}),function(e){return e.points;});};
 var spent=function(id){return sum(S.redemptions.filter(function(r){return r.memberId===id&&r.status!=='rejected';}),function(r){return r.cost;});};
-var balance=function(id){return total(id)-spent(id);};
+var balance=function(id){return total(id)-spent(id)-locked(id);};
 var waiting=function(id){return sum(S.entries.filter(function(e){return e.memberId===id&&e.status==='pending';}),function(e){return e.points;});};
-var pendingCount=function(){return S.entries.filter(function(e){return e.status==='pending';}).length+S.redemptions.filter(function(r){return r.status==='pending';}).length;};
+var pendingCount=function(){return S.entries.filter(function(e){return e.status==='pending';}).length+S.redemptions.filter(function(r){return r.status==='pending';}).length+S.pots.filter(function(p){return potLive(p)&&(p.status==='pending'||p.status==='claiming');}).length;};
 var sg=function(n){return n>0?'+'+n:n<0?'−'+Math.abs(n):'0';};
 var ptsWord=function(n){return Math.abs(n)>1?'points':'point';};
 function periodStart(p){
@@ -176,7 +176,13 @@ function tabbar(m){
 function historyItems(mid){
   var e=S.entries.filter(function(x){return x.memberId===mid;}).map(function(x){return {kind:'entries',id:x.id,label:x.label,pts:x.points,status:x.status,ts:x.ts||0};});
   var r=S.redemptions.filter(function(x){return x.memberId===mid;}).map(function(x){return {kind:'redemptions',id:x.id,label:'Récompense : '+x.label,pts:-x.cost,status:x.status,ts:x.ts||0,used:!!x.usedTs};});
-  return e.concat(r).sort(function(a,b){return b.ts-a.ts;});
+  var c=[];
+  S.potMembers.forEach(function(x){
+    if(x.memberId!==mid||x.status!=='in') return;
+    var p=potById(x.potId); if(!p||!potLive(p)) return;
+    c.push({kind:'pots',id:p.id,label:'Cagnotte : '+p.name,pts:-x.amount,status:p.status==='done'?'approved':'pending',ts:p.ts||0,potDone:p.status==='done'});
+  });
+  return e.concat(r).concat(c).sort(function(a,b){return b.ts-a.ts;});
 }
 function historyHtml(mid,opts){
   opts=opts||{};
@@ -187,12 +193,12 @@ function historyHtml(mid,opts){
     var key=it.kind+':'+it.id;
     var cls=it.status==='rejected'?'off':(it.pts>0?'plus':'minus');
     var del='';
-    if(opts.del){
+    if(opts.del&&it.kind!=='pots'){
       del = (sheet&&sheet.confirm===key)
         ? '<div class="mactions"><button class="btn small danger" data-act="delgo" data-kind="'+it.kind+'" data-id="'+esc(it.id)+'">Supprimer</button><button class="btn small" data-act="delcancel">Annuler</button></div>'
         : '<button class="link bad" data-act="delask" data-kind="'+it.kind+'" data-id="'+esc(it.id)+'">Supprimer</button>';
     }
-    return '<li><div class="hrow"><div class="hmain"><div class="hlabel">'+esc(it.label)+'</div><div class="hmeta"><span>'+ago(it.ts)+'</span>'+(it.kind==='redemptions'&&it.status==='approved'?'<span class="pill '+(it.used?'approved':'pending')+'">'+(it.used?'Récupérée':'À récupérer')+'</span>':statusPill(it.status))+(opts.del?del:'')+'</div></div><div class="hpts '+cls+'">'+sg(it.pts)+'</div></div></li>';
+    return '<li><div class="hrow"><div class="hmain"><div class="hlabel">'+esc(it.label)+'</div><div class="hmeta"><span>'+ago(it.ts)+'</span>'+(it.kind==='pots'?'<span class="pill '+(it.potDone?'approved':'pending')+'">'+(it.potDone?'Dépensé':'Mis de côté')+'</span>':it.kind==='redemptions'&&it.status==='approved'?'<span class="pill '+(it.used?'approved':'pending')+'">'+(it.used?'Récupérée':'À récupérer')+'</span>':statusPill(it.status))+(opts.del?del:'')+'</div></div><div class="hpts '+cls+'">'+sg(it.pts)+'</div></div></li>';
   }).join('')+'</ul>';
 }
 function lastGains(mid,n){
@@ -222,8 +228,9 @@ function homeSelf(m){
   else goal='<div class="goal"><p>Tu as assez de points pour toutes les récompenses.</p></div>';
   return '<section class="card hero"><div class="eyebrow">Tes points</div><div class="big">'+bal+'</div>'+
     (wait>0?'<p class="muted small">+'+wait+' '+ptsWord(wait)+' en attente de validation</p>':'')+goal+
-    '<button class="btn primary block" data-act="openEarn">Gagner des points</button></section>'+
-    prizeCards(m)+
+    '<button class="btn primary block" data-act="openEarn">Gagner des points</button>'+
+    '<button class="btn block" data-act="potNew">Regrouper nos points</button></section>'+
+    prizeCards(m)+potsSection(m)+
     '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:15})+'</section>';
 }
 function homeAdult(m){
@@ -231,6 +238,7 @@ function homeAdult(m){
   var ms=S.members.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);});
   var out='';
   if(pc) out+='<button class="alert" data-act="tab" data-tab="approve"><strong>'+pc+' à valider</strong><span>Voir les demandes</span></button>';
+  out+=potsSection(m);
   out+='<section class="card"><div class="section-title"><h3>La famille</h3><span class="muted small">Touche un nom pour voir le détail</span></div><ul class="list">'+
     ms.map(function(x){
       var wt=waiting(x.id);
@@ -242,7 +250,15 @@ function homeAdult(m){
 function approveView(){
   var es=S.entries.filter(function(e){return e.status==='pending';}).sort(function(a,b){return a.ts-b.ts;});
   var rs=S.redemptions.filter(function(r){return r.status==='pending';}).sort(function(a,b){return a.ts-b.ts;});
-  if(!es.length&&!rs.length) return '<section class="card empty"><h3>Rien à valider</h3><p>Les demandes de points et de récompenses apparaîtront ici.</p></section>';
+  var ps=S.pots.filter(function(p){return potLive(p)&&p.status==='pending';}).sort(function(a,b){return a.ts-b.ts;});
+  var cs=S.pots.filter(function(p){return potLive(p)&&p.status==='claiming';}).sort(function(a,b){return a.ts-b.ts;});
+  if(!es.length&&!rs.length&&!ps.length&&!cs.length) return '<section class="card empty"><h3>Rien à valider</h3><p>Les demandes de points, de récompenses et de cagnottes apparaîtront ici.</p></section>';
+  function potRow(p,claim){
+    var cr=mById(p.createdBy), inv=S.potMembers.filter(function(x){return x.potId===p.id;}).length-1;
+    var info=claim?('Choix : <strong>'+esc(p.chosenLabel||'')+'</strong> ('+(p.chosenCost||0)+' pts)'):('Invite '+inv+' '+(inv>1?'personnes':'personne')+' · '+potTotal(p)+' pts mis par '+esc(cr?cr.name:'?'));
+    return '<li><div class="arow" style="flex-wrap:wrap">'+(cr?avatar(cr):'')+'<div class="hmain"><div class="hlabel">'+esc(p.name)+'</div><div class="hmeta"><span>'+info+'</span></div></div>'+
+    '<div class="mactions" style="width:100%;justify-content:flex-end"><button class="btn small" data-act="'+(claim?'potClaimNo':'potRefuse')+'" data-id="'+esc(p.id)+'">Refuser</button><button class="btn small" data-act="pot" data-id="'+esc(p.id)+'">Voir</button><button class="btn small primary" data-act="'+(claim?'potClaimOk':'potApprove')+'" data-id="'+esc(p.id)+'">Valider</button></div></div></li>';
+  }
   function row(kind,x,label,pts){
     var m=mById(x.memberId); if(!m) return '';
     return '<li><div class="arow" style="flex-wrap:wrap">'+avatar(m)+'<div class="hmain"><div class="hlabel">'+esc(label)+'</div><div class="hmeta"><span>'+esc(m.name)+'</span><span>'+ago(x.ts||0)+'</span></div></div><div class="hpts '+(pts>0?'plus':'minus')+'">'+sg(pts)+'</div>'+
@@ -251,6 +267,8 @@ function approveView(){
   }
   var out='';
   if(es.length) out+='<section class="card"><h3>Points demandés</h3><ul class="list">'+es.map(function(e){return row('entries',e,e.label,e.points);}).join('')+'</ul></section>';
+  if(ps.length) out+='<section class="card"><h3>Cagnottes à valider</h3><ul class="list">'+ps.map(function(p){return potRow(p,false);}).join('')+'</ul></section>';
+  if(cs.length) out+='<section class="card"><h3>Choix de cagnotte à valider</h3><ul class="list">'+cs.map(function(p){return potRow(p,true);}).join('')+'</ul></section>';
   if(rs.length) out+='<section class="card"><h3>Récompenses demandées</h3><ul class="list">'+rs.map(function(r){return row('redemptions',r,r.label,-r.cost);}).join('')+'</ul></section>';
   return out;
 }
@@ -320,7 +338,7 @@ function render(){
   if(tab==='home') body+=pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
-  if(sheet&&sheet.type==='member') renderSheet();
+  if(sheet&&(sheet.type==='member'||sheet.type==='pot')) renderSheet();
 }
 document.addEventListener('focusout',function(){ if(dirty) setTimeout(render,80); });
 
@@ -340,6 +358,7 @@ function sheetBody(){
     '<div class="field"><span class="lbl">Photo</span><div class="photoprev" id="photoPrev" hidden></div><label class="btn block photobtn" for="f-photo"><input id="f-photo" type="file" accept="image/*" capture="environment"><span id="photoLbl">Prendre une photo</span></label></div>'+
     '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Envoyer à l’adulte</button></form>';
   }
+  var ps2=potSheetBody(s); if(ps2!==null) return ps2;
   if(s.type==='deleteFamily'){
     return '<h2>Supprimer la famille</h2><p>Tous les profils, points, tâches, récompenses et photos seront supprimés pour toujours, sur tous les appareils.</p><form data-form="deleteFamily"><div class="field"><label for="f-confirm">Écris SUPPRIMER pour confirmer</label><input id="f-confirm" name="confirm" type="text" autocomplete="off" autocapitalize="characters"></div><p class="err" id="err" role="alert"></p><button class="btn danger block" type="submit">Supprimer définitivement</button></form>';
   }
@@ -361,7 +380,7 @@ function sheetBody(){
     var viewer=mById(sess);
     if(!viewer||!isAdult(viewer)) return memberReadOnly(m);
     return '<div style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+(isAdult(m)?'Adulte':'Enfant')+'</span></div></div>'+
-    '<div class="hero"><div class="eyebrow">Points disponibles</div><div class="big" style="font-size:64px">'+balance(m.id)+'</div><p class="muted small">Total gagné : '+total(m.id)+' · dépensé : '+spent(m.id)+'</p></div>'+
+    '<div class="hero"><div class="eyebrow">Points disponibles</div><div class="big" style="font-size:64px">'+balance(m.id)+'</div><p class="muted small">Total gagné : '+total(m.id)+' · dépensé : '+spent(m.id)+(locked(m.id)?' · en cagnotte : '+locked(m.id):'')+'</p></div>'+
     '<div class="mactions"><button class="btn primary" style="flex:1" data-act="adjust" data-id="'+esc(m.id)+'" data-sign="1">Ajouter</button><button class="btn" style="flex:1" data-act="adjust" data-id="'+esc(m.id)+'" data-sign="-1">Retirer</button></div>'+
     '<h3>Historique</h3>'+historyHtml(m.id,{del:true});
   }
@@ -406,7 +425,7 @@ function renderSheet(){
 }
 function openSheet(s){
   sheet=s; renderSheet();
-  if(s.type!=='member'&&s.type!=='redeem'){
+  if(s.type!=='member'&&s.type!=='redeem'&&s.type!=='pot'){
     setTimeout(function(){ var i=$sheet.querySelector('input:not([type=radio]):not([hidden]),select'); if(i) i.focus(); },60);
   }
 }
@@ -438,6 +457,24 @@ async function act(name,ds){
     case 'photo': openSheet({type:'photo',id:ds.id}); break;
     case 'adjust': openSheet({type:'adjust',id:ds.id,sign:ds.sign}); break;
     case 'member': openSheet({type:'member',id:ds.id}); break;
+    case 'potNew': openSheet({type:'potNew'}); break;
+    case 'pot': openSheet({type:'pot',id:ds.id}); break;
+    case 'potJoin': openSheet({type:'potAmount',id:ds.id,mode:'join'}); break;
+    case 'potAdd': openSheet({type:'potAmount',id:ds.id,mode:'add'}); break;
+    case 'potDecline': await potRpc('respond_pot',{p_pot:ds.id,p_accept:false,p_amount:0},'Tu ne participes pas à cette cagnotte.'); break;
+    case 'potLeave': if(await potRpc('leave_pot',{p_pot:ds.id},'Tes points te sont rendus.')) closeSheet(); break;
+    case 'potCancelAsk': sheet.confirm=true; renderSheet(); break;
+    case 'potCancelGo': if(await potRpc('cancel_pot',{p_pot:ds.id},'Cagnotte annulée. Les points sont rendus.')) closeSheet(); break;
+    case 'potApprove': await potRpc('approve_pot',{p_pot:ds.id,p_ok:true},'Cagnotte validée.'); break;
+    case 'potRefuse': await potRpc('approve_pot',{p_pot:ds.id,p_ok:false},'Cagnotte refusée.'); break;
+    case 'potClaimOk': await potRpc('decide_pot_claim',{p_pot:ds.id,p_ok:true},'Cagnotte réussie !'); break;
+    case 'potClaimNo': await potRpc('decide_pot_claim',{p_pot:ds.id,p_ok:false},'Choix refusé.'); break;
+    case 'potChoose': await potRpc('choose_pot_reward',{p_pot:sheet.id,p_reward:ds.id},isAdult(m)?'Cagnotte réussie !':'Envoyé à un adulte pour validation.'); break;
+    case 'potRewardEdit': openSheet({type:'potReward',pot:ds.pot,id:ds.id||null}); break;
+    case 'potRewardDelGo':
+      if(await potRpc('delete_pot_reward',{p_pot:sheet.pot,p_id:sheet.id},'Récompense supprimée.')) openSheet({type:'pot',id:sheet.pot});
+      break;
+    case 'potUsed': await potRpc('mark_pot_used',{p_pot:ds.id},'Parfait, c’est noté.'); break;
     case 'rewardUsed':
       if(await w(async function(){ dbErr(await sb.rpc('mark_reward_used',{p_id:ds.id})); })) toast('Parfait, c’est noté.');
       break;
@@ -529,6 +566,31 @@ document.addEventListener('submit',async function(e){
       await afterLink('family');
       toast('Famille créée. Voici ton code.');
     }
+    else if(kind==='potNew'){
+      var pn=g('name'), pa=parseInt(g('amount'),10), inv=fd.getAll('inv'), dl=g('deadline');
+      if(!pn){ err('Donne un nom à la cagnotte.'); return; }
+      if(!inv.length){ err('Invite au moins une personne.'); return; }
+      if(!(pa>=1)){ err('Mets au moins 1 point.'); return; }
+      var dlIso=null; if(dl){ var dd=new Date(dl+'T23:59:00'); if(isNaN(dd.getTime())||dd.getTime()<=Date.now()){ err('La date limite doit être dans le futur.'); return; } dlIso=dd.toISOString(); }
+      var pr=await sb.rpc('create_pot',{p_name:pn,p_invitees:inv,p_amount:pa,p_deadline:dlIso});
+      if(pr.error){ err(pr.error.code==='P0001'?pr.error.message:'Impossible de créer la cagnotte. Vérifie ta connexion.'); return; }
+      scheduleRefresh(); closeSheet(); toast(isAdult(mById(sess))?'Cagnotte créée. Les invités sont prévenus.':'Envoyé à un adulte pour validation.');
+    }
+    else if(kind==='potAmount'){
+      var am=parseInt(g('amount'),10), mode=form.dataset.mode, pid=form.dataset.id;
+      if(!(am>=1)){ err('Mets au moins 1 point.'); return; }
+      var ar=mode==='join'?await sb.rpc('respond_pot',{p_pot:pid,p_accept:true,p_amount:am}):await sb.rpc('add_to_pot',{p_pot:pid,p_amount:am});
+      if(ar.error){ err(ar.error.code==='P0001'?ar.error.message:'Impossible pour le moment. Vérifie ta connexion.'); return; }
+      scheduleRefresh(); openSheet({type:'pot',id:pid}); toast(mode==='join'?'Tu participes à la cagnotte.':'Points ajoutés.');
+    }
+    else if(kind==='potReward'){
+      var potId=form.dataset.pot, rwId=form.dataset.id||null;
+      if(!label){ err('Donne un nom à la récompense.'); return; }
+      if(!(n>=1)){ err('Entre le nombre de points nécessaires.'); return; }
+      var rr=await sb.rpc('save_pot_reward',{p_pot:potId,p_id:rwId,p_label:label,p_cost:n});
+      if(rr.error){ err(rr.error.code==='P0001'?rr.error.message:'Impossible pour le moment. Vérifie ta connexion.'); return; }
+      scheduleRefresh(); openSheet({type:'pot',id:potId}); toast('Récompense enregistrée.');
+    }
     else if(kind==='join'){
       var jr=await sb.rpc('join_family',{p_name:g('name'),p_code:g('code')});
       if(jr.error){ err('Impossible de rejoindre pour le moment. Vérifie ta connexion.'); return; }
@@ -593,6 +655,9 @@ var fromRow={
   rewards:function(r){return {id:r.id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
   entries:function(r){return {id:r.id,memberId:r.member_id,taskId:r.task_id,label:r.label,points:r.points,status:r.status,photo:!!r.photo_path,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null};},
   redemptions:function(r){return {id:r.id,memberId:r.member_id,rewardId:r.reward_id,label:r.label,cost:r.cost,status:r.status,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null,usedTs:r.used_at?Date.parse(r.used_at):null};},
+  pots:function(r){return {id:r.id,name:r.name,createdBy:r.created_by,status:r.status,deadline:r.deadline?Date.parse(r.deadline):null,chosenId:r.chosen_reward_id,chosenLabel:r.chosen_label,chosenCost:r.chosen_cost,ts:Date.parse(r.created_at),usedTs:r.used_at?Date.parse(r.used_at):null};},
+  potMembers:function(r){return {id:r.pot_id+':'+r.member_id,potId:r.pot_id,memberId:r.member_id,status:r.status,amount:r.amount};},
+  potRewards:function(r){return {id:r.id,potId:r.pot_id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
   family:function(r){return {id:'main',code:r.code};}
 };
 function dbErr(r){ if(r&&r.error) throw r.error; return r; }
@@ -671,7 +736,7 @@ function onVisible(){ if(document.visibilityState==='visible') loadAll(); }
 function startData(){
   if(rt||!sb) return;
   rt=sb.channel('pf-'+familyId);
-  ['members','entries','rewards','redemptions','tasks'].forEach(function(t){
+  ['members','entries','rewards','redemptions','tasks','pots','pot_members','pot_rewards'].forEach(function(t){
     rt.on('postgres_changes',{event:'*',schema:'public',table:t},scheduleRefresh);
   });
   rt.subscribe();
@@ -705,6 +770,139 @@ async function deleteFamilyData(){
   stopData(); resetData();
   return true;
 }
+/* ---------- cagnottes : regrouper des points ---------- */
+var POT_OPEN=['pending','active','claiming'];
+function potLive(p){ return p.status==='done'||(POT_OPEN.indexOf(p.status)>=0&&(!p.deadline||p.deadline>Date.now())); }
+function potExpired(p){ return POT_OPEN.indexOf(p.status)>=0&&!!p.deadline&&p.deadline<=Date.now(); }
+function potById(id){ return S.pots.find(function(p){return p.id===id;}); }
+function pmOf(p,mid){ return S.potMembers.find(function(x){return x.potId===p.id&&x.memberId===mid;}); }
+function potIn(p){ return S.potMembers.filter(function(x){return x.potId===p.id&&x.status==='in';}); }
+function potTotal(p){ return sum(potIn(p),function(x){return x.amount;}); }
+function potRewardsOf(p){ return S.potRewards.filter(function(r){return r.potId===p.id;}).sort(function(a,b){return a.cost-b.cost||a.label.localeCompare(b.label,'fr');}); }
+function locked(id){
+  var t=0;
+  S.potMembers.forEach(function(x){ if(x.memberId!==id||x.status!=='in') return; var p=potById(x.potId); if(p&&potLive(p)) t+=x.amount; });
+  return t;
+}
+function potStatusText(p){
+  if(potExpired(p)) return 'Expirée';
+  return {pending:'En attente d’un adulte',active:'En cours',claiming:'Choix à valider',done:'Terminée',cancelled:'Annulée'}[p.status]||p.status;
+}
+function dateFr(ts){ return new Date(ts).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}); }
+async function potRpc(fn,args,okMsg){
+  var ok=await w(async function(){ dbErr(await sb.rpc(fn,args)); });
+  if(ok&&okMsg) toast(okMsg);
+  return ok;
+}
+function potVisible(p,m){
+  if(!potLive(p)||p.status==='done'||p.status==='cancelled') return false;
+  if(p.status==='pending') return isAdult(m)||p.createdBy===m.id;
+  var mine=pmOf(p,m.id);
+  return isAdult(m)||(mine&&mine.status!=='declined')||false;
+}
+function potInvites(m){
+  return S.pots.filter(function(p){var x=pmOf(p,m.id);return x&&x.status==='invited'&&p.status==='active'&&potLive(p);}).map(function(p){
+    var cr=mById(p.createdBy);
+    return '<section class="card invite"><div class="eyebrow">Invitation</div><div class="prize-title" style="font-size:24px">'+esc(p.name)+'</div><p class="muted small">'+esc(cr?cr.name:'Quelqu’un')+' t’invite à regrouper des points. Tu choisis combien tu mets.</p><div class="mactions"><button class="btn" style="flex:1" data-act="potDecline" data-id="'+esc(p.id)+'">Non merci</button><button class="btn primary" style="flex:1" data-act="potJoin" data-id="'+esc(p.id)+'">Participer</button></div></section>';
+  }).join('');
+}
+function potPrizes(m){
+  return S.pots.filter(function(p){var x=pmOf(p,m.id);return p.status==='done'&&!p.usedTs&&x&&x.status==='in';}).map(function(p){
+    return '<section class="card prize"><div class="eyebrow">Bravo ! Cagnotte réussie</div><div class="prize-title">'+esc(p.chosenLabel||p.name)+'</div><p class="muted small">'+esc(p.name)+'. Appuie sur le bouton quand vous l’avez eue.</p><button class="btn primary block" data-act="potUsed" data-id="'+esc(p.id)+'">Récupérée</button></section>';
+  }).join('');
+}
+function potProgress(p){
+  var t=potTotal(p), rw=potRewardsOf(p), target=rw.length?rw[0].cost:0;
+  return {total:t,target:target,pct:target?Math.max(0,Math.min(100,t/target*100)):0};
+}
+function potsSection(m){
+  var adult=isAdult(m);
+  var list=S.pots.filter(function(p){return potVisible(p,m);}).sort(function(a,b){return b.ts-a.ts;});
+  var h=potInvites(m)+potPrizes(m);
+  if(!adult&&!list.length) return h;
+  h+='<section class="card"><div class="section-title"><h3>Cagnottes</h3>'+(adult?'<button class="btn small primary" data-act="potNew">Regrouper nos points</button>':'')+'</div>';
+  if(!list.length) h+='<p class="muted small" style="margin-top:6px">Regroupez des points pour viser une plus grosse récompense.</p>';
+  else h+='<ul class="list">'+list.map(function(p){
+    var pr=potProgress(p), cr=mById(p.createdBy);
+    return '<li><div class="potitem"><button class="open potopen" data-act="pot" data-id="'+esc(p.id)+'"><span class="mmain"><span class="hlabel">'+esc(p.name)+'</span><br><span class="muted small">'+potStatusText(p)+(cr?' · '+esc(cr.name):'')+(p.deadline?' · jusqu’au '+dateFr(p.deadline):'')+'</span></span><span class="bal">'+pr.total+'</span></button>'+
+    '<div class="bar"><i style="width:'+pr.pct+'%"></i></div>'+(pr.target?'<p class="muted small" style="margin:4px 0 0">Première récompense : '+pr.target+' pts</p>':'')+'</div></li>';
+  }).join('')+'</ul>';
+  return h+'</section>';
+}
+function potSheetBody(s){
+  var me=mById(sess);
+  if(s.type==='potNew'){
+    if(!me) return '';
+    var others=S.members.filter(function(x){return x.id!==me.id;}).sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+    if(!others.length) return '<h2>Regrouper nos points</h2><p class="muted">Il faut au moins une autre personne dans la famille.</p>';
+    var bal=balance(me.id);
+    if(bal<1) return '<h2>Regrouper nos points</h2><p class="muted">Tu n’as pas encore de points à mettre dans une cagnotte.</p>';
+    return '<h2>Regrouper nos points</h2><p class="muted">Mettez des points en commun pour viser une plus grosse récompense. Chacun choisit combien il met.</p>'+
+    '<form data-form="potNew"><div class="field"><label for="f-name">Nom de la cagnotte</label><input id="f-name" name="name" type="text" maxlength="60" autocomplete="off" required placeholder="Ex. : Sortie au parc"></div>'+
+    '<div class="field"><span class="lbl">Invités</span><div class="tasklist">'+others.map(function(x){return '<label class="taskopt"><input type="checkbox" name="inv" value="'+esc(x.id)+'" checked><span class="tbody"><span>'+esc(x.name)+'</span></span></label>';}).join('')+'</div></div>'+
+    '<div class="field"><label for="f-amount">Tes points dans la cagnotte (tu en as '+bal+')</label><input id="f-amount" name="amount" type="number" inputmode="numeric" min="1" max="'+bal+'" required></div>'+
+    '<div class="field"><label for="f-deadline">Date limite (facultatif)</label><input id="f-deadline" name="deadline" type="date"><span class="muted small">Sans date, la cagnotte reste ouverte jusqu’à ce qu’elle soit utilisée ou annulée.</span></div>'+
+    (isAdult(me)?'':'<p class="muted small">Un adulte devra valider la cagnotte avant qu’elle démarre.</p>')+
+    '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Créer la cagnotte</button></form>';
+  }
+  if(s.type==='potAmount'){
+    var p=potById(s.id); if(!p||!me) return '';
+    var bl=balance(me.id);
+    if(bl<1) return '<h2>'+esc(p.name)+'</h2><p class="muted">Tu n’as pas de points disponibles pour le moment.</p><button class="btn block" data-act="pot" data-id="'+esc(p.id)+'">Retour</button>';
+    return '<h2>'+(s.mode==='join'?'Participer':'Ajouter des points')+'</h2><p class="muted">'+esc(p.name)+'. Tu as <strong>'+bl+'</strong> '+ptsWord(bl)+' disponibles. Tu choisis combien tu mets, pas besoin de tout donner.</p>'+
+    '<form data-form="potAmount" data-id="'+esc(p.id)+'" data-mode="'+esc(s.mode)+'"><div class="field"><label for="f-amount">Points à mettre</label><input id="f-amount" name="amount" type="number" inputmode="numeric" min="1" max="'+bl+'" required></div><p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Confirmer</button></form>';
+  }
+  if(s.type==='potReward'){
+    var pp=potById(s.pot); if(!pp) return '';
+    var rw=s.id?S.potRewards.find(function(x){return x.id===s.id;}):null;
+    var del=rw?(s.confirm?'<div class="mactions"><button type="button" class="btn danger" style="flex:1" data-act="potRewardDelGo">Supprimer</button><button type="button" class="btn" style="flex:1" data-act="delcancel">Annuler</button></div>':'<button type="button" class="btn danger block" data-act="delaskThing">Supprimer cette récompense</button>'):'';
+    return '<h2>'+(rw?'Modifier la récompense':'Nouvelle récompense')+'</h2><p class="muted small">'+esc(pp.name)+'</p><form data-form="potReward" data-pot="'+esc(pp.id)+'" data-id="'+(rw?esc(rw.id):'')+'"><div class="field"><label for="f-label">Nom</label><input id="f-label" name="label" type="text" maxlength="80" autocomplete="off" required value="'+esc(rw?rw.label:'')+'"></div>'+
+    '<div class="field"><label for="f-cost">Points nécessaires</label><input id="f-cost" name="cost" type="number" inputmode="numeric" min="1" max="1000000" required value="'+(rw?rw.cost:'')+'"></div><p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Enregistrer</button>'+del+'</form>';
+  }
+  if(s.type==='pot'){
+    var q=potById(s.id); if(!q||!me) return '';
+    var adult=isAdult(me), mine=pmOf(q,me.id), isCr=q.createdBy===me.id, live=potLive(q), open=live&&POT_OPEN.indexOf(q.status)>=0;
+    var tot=potTotal(q), rws=potRewardsOf(q), cr=mById(q.createdBy);
+    var h='<h2>'+esc(q.name)+'</h2><p class="muted small">'+potStatusText(q)+(cr?' · créée par '+esc(cr.name):'')+(q.deadline?' · jusqu’au '+dateFr(q.deadline):'')+'</p>';
+    h+='<div class="hero"><div class="eyebrow">'+(q.status==='done'?'Points dépensés':'Points regroupés')+'</div><div class="big" style="font-size:56px">'+(q.status==='done'?(q.chosenCost||tot):tot)+'</div></div>';
+    if(q.status==='done') h+='<p><strong>Récompense obtenue :</strong> '+esc(q.chosenLabel||'')+'</p>';
+    if(q.status==='claiming') h+='<p class="note">Choix en attente de validation : <strong>'+esc(q.chosenLabel||'')+'</strong> ('+(q.chosenCost||0)+' pts)</p>';
+    if(q.status==='pending') h+='<p class="note">En attente de la validation d’un adulte avant de démarrer.</p>';
+    if(q.status==='cancelled') h+='<p class="note">Cagnotte annulée, les points ont été rendus.</p>';
+    if(potExpired(q)) h+='<p class="note">La date limite est passée, les points ont été rendus.</p>';
+    var pms=S.potMembers.filter(function(x){return x.potId===q.id;}).sort(function(a,b){var o={in:0,invited:1,declined:2};return (o[a.status]-o[b.status])||(b.amount-a.amount);});
+    h+='<h3>Participants</h3><ul class="list">'+pms.map(function(x){
+      var mm=mById(x.memberId); if(!mm) return '';
+      return '<li><div class="hrow">'+avatar(mm)+'<div class="hmain"><div class="hlabel">'+esc(mm.name)+(mm.id===me.id?' (toi)':'')+'</div><div class="hmeta"><span>'+({in:'participe',invited:'invité(e)',declined:'ne participe pas'}[x.status])+'</span></div></div><div class="hpts plus">'+(x.status==='in'?x.amount:'')+'</div></div></li>';
+    }).join('')+'</ul>';
+    if(q.status!=='done'&&q.status!=='cancelled'){
+      h+='<h3>Récompenses possibles</h3>';
+      if(!rws.length) h+='<p class="muted small">'+(adult?'Ajoute les récompenses possibles et leur coût.':'Un adulte va ajouter les récompenses possibles.')+'</p>';
+      else h+='<ul class="list">'+rws.map(function(r){
+        var canPick=open&&q.status==='active'&&tot>=r.cost&&(adult||isCr);
+        return '<li><div class="potrw"><div class="reward-top"><strong class="hlabel">'+esc(r.label)+'</strong><span class="cost">'+r.cost+'</span></div><div class="bar"><i style="width:'+Math.max(0,Math.min(100,tot/r.cost*100))+'%"></i></div><div class="reward-bottom">'+
+        (canPick?'<button class="btn small primary" data-act="potChoose" data-id="'+esc(r.id)+'">Choisir</button>':(open&&q.status==='active'&&tot<r.cost?'<span class="muted small">Encore '+(r.cost-tot)+' '+ptsWord(r.cost-tot)+'</span>':'<span></span>'))+
+        (adult&&open&&(q.status==='active'||q.status==='pending')?'<button class="link" data-act="potRewardEdit" data-pot="'+esc(q.id)+'" data-id="'+esc(r.id)+'">Modifier</button>':'')+'</div></div></li>';
+      }).join('')+'</ul>';
+      if(adult&&open&&(q.status==='active'||q.status==='pending')) h+='<button class="btn block" data-act="potRewardEdit" data-pot="'+esc(q.id)+'">Ajouter une récompense</button>';
+    }
+    var acts='';
+    if(open&&adult&&q.status==='pending') acts+='<div class="mactions"><button class="btn" style="flex:1" data-act="potRefuse" data-id="'+esc(q.id)+'">Refuser</button><button class="btn primary" style="flex:1" data-act="potApprove" data-id="'+esc(q.id)+'">Valider</button></div>';
+    if(open&&adult&&q.status==='claiming') acts+='<div class="mactions"><button class="btn" style="flex:1" data-act="potClaimNo" data-id="'+esc(q.id)+'">Refuser le choix</button><button class="btn primary" style="flex:1" data-act="potClaimOk" data-id="'+esc(q.id)+'">Valider le choix</button></div>';
+    if(open&&q.status==='active'&&mine&&mine.status==='invited') acts+='<div class="mactions"><button class="btn" style="flex:1" data-act="potDecline" data-id="'+esc(q.id)+'">Non merci</button><button class="btn primary" style="flex:1" data-act="potJoin" data-id="'+esc(q.id)+'">Participer</button></div>';
+    if(open&&q.status==='active'&&mine&&mine.status==='in'){
+      acts+='<button class="btn primary block" data-act="potAdd" data-id="'+esc(q.id)+'">Ajouter des points</button>';
+      if(!isCr) acts+='<button class="btn block" data-act="potLeave" data-id="'+esc(q.id)+'">Retirer mes points</button>';
+    }
+    if(q.status==='done'&&!q.usedTs&&(adult||(mine&&mine.status==='in'))) acts+='<button class="btn primary block" data-act="potUsed" data-id="'+esc(q.id)+'">Récupérée</button>';
+    if(open&&(adult||isCr)){
+      acts+=s.confirm?'<p class="muted small">Les points de tout le monde seront rendus.</p><div class="mactions"><button class="btn danger" style="flex:1" data-act="potCancelGo" data-id="'+esc(q.id)+'">Annuler la cagnotte</button><button class="btn" style="flex:1" data-act="delcancel">Garder</button></div>':'<button class="btn danger block" data-act="potCancelAsk">Annuler la cagnotte</button>';
+    }
+    return h+(acts?'<div class="potacts">'+acts+'</div>':'');
+  }
+  return null;
+}
+
 /* ---------- notifications (web push) ---------- */
 var pushState='', pushBusy=false, pushSnoozed=false;
 function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1); }
