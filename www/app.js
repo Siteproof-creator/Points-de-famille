@@ -195,6 +195,18 @@ function historyHtml(mid,opts){
     return '<li><div class="hrow"><div class="hmain"><div class="hlabel">'+esc(it.label)+'</div><div class="hmeta"><span>'+ago(it.ts)+'</span>'+statusPill(it.status)+(opts.del?del:'')+'</div></div><div class="hpts '+cls+'">'+sg(it.pts)+'</div></div></li>';
   }).join('')+'</ul>';
 }
+function lastGains(mid,n){
+  return S.entries.filter(function(x){return x.memberId===mid&&x.status==='approved'&&x.points>0;}).sort(function(a,b){return (b.decidedTs||b.ts||0)-(a.decidedTs||a.ts||0);}).slice(0,n);
+}
+function memberReadOnly(m){
+  var items=lastGains(m.id,5);
+  var list=items.length?'<ul class="list">'+items.map(function(x){
+    return '<li><div class="hrow"><div class="hmain"><div class="hlabel">'+esc(x.label)+'</div><div class="hmeta"><span>'+ago(x.decidedTs||x.ts||0)+'</span></div></div><div class="hpts plus">'+sg(x.points)+'</div></div></li>';
+  }).join('')+'</ul>':'<p class="muted">Aucun point gagné pour l’instant.</p>';
+  return '<div style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div><h2 style="padding:0">'+esc(m.name)+(m.id===sess?' (toi)':'')+'</h2><span class="muted small">'+(isAdult(m)?'Adulte':'Enfant')+'</span></div></div>'+
+    '<div class="hero"><div class="eyebrow">Points disponibles</div><div class="big" style="font-size:64px">'+balance(m.id)+'</div></div>'+
+    '<h3>Derniers points gagnés</h3>'+list;
+}
 function homeSelf(m){
   var bal=balance(m.id), wait=waiting(m.id);
   var rs=S.rewards.slice().sort(function(a,b){return a.cost-b.cost;});
@@ -247,7 +259,7 @@ function rankView(m){
     (allZero?'<p class="note">Personne n’a encore de points sur cette période.</p>':'')+
     '<ul class="list">'+rows.map(function(r){
       var me=r.m.id===m.id;
-      return '<li><div class="rrow'+(r.rank===1&&r.s>0?' first':'')+(me?' me':'')+'"><span class="rnk">'+(allZero?'–':r.rank)+'</span>'+avatar(r.m)+'<span class="rname">'+esc(r.m.name)+(me?' (toi)':'')+'</span><span class="rpts">'+r.s+'</span></div></li>';
+      return '<li><button class="rrow'+(r.rank===1&&r.s>0?' first':'')+(me?' me':'')+'" data-act="member" data-id="'+esc(r.m.id)+'"><span class="rnk">'+(allZero?'–':r.rank)+'</span>'+avatar(r.m)+'<span class="rname">'+esc(r.m.name)+(me?' (toi)':'')+'</span><span class="rpts">'+r.s+'</span></button></li>';
     }).join('')+'</ul></section>';
 }
 function rewardsView(m){
@@ -340,6 +352,8 @@ function sheetBody(){
   }
   if(s.type==='member'){
     var m=mById(s.id); if(!m) return '';
+    var viewer=mById(sess);
+    if(!viewer||!isAdult(viewer)) return memberReadOnly(m);
     return '<div style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+(isAdult(m)?'Adulte':'Enfant')+'</span></div></div>'+
     '<div class="hero"><div class="eyebrow">Points disponibles</div><div class="big" style="font-size:64px">'+balance(m.id)+'</div><p class="muted small">Total gagné : '+total(m.id)+' · dépensé : '+spent(m.id)+'</p></div>'+
     '<div class="mactions"><button class="btn primary" style="flex:1" data-act="adjust" data-id="'+esc(m.id)+'" data-sign="1">Ajouter</button><button class="btn" style="flex:1" data-act="adjust" data-id="'+esc(m.id)+'" data-sign="-1">Retirer</button></div>'+

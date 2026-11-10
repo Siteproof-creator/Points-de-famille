@@ -228,3 +228,7 @@ input[type=text],input[type=number],input[type=password],select{background:var(-
   .card,.topbar,.tabbar,.sheet,.note,.btn,.toast{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 @media (prefers-reduced-motion:reduce){.sheet,.spinner{animation:none}}
+
+/* classement : lignes cliquables */
+button.rrow{width:100%;background:none;border:0;font:inherit;color:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.rrow .rname{flex:1;min-width:0}
