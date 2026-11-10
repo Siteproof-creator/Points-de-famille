@@ -233,18 +233,48 @@ function homeSelf(m){
     prizeCards(m)+potsSection(m)+
     '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:15})+'</section>';
 }
+function todoItems(){
+  var it=[];
+  S.entries.filter(function(e){return e.status==='pending';}).sort(function(a,b){return a.ts-b.ts;}).forEach(function(e){
+    var x=mById(e.memberId); if(!x) return;
+    it.push({who:x,t:e.label,s:x.name+' · demande de points',pts:e.points,btn:'<button class="btn small primary" data-act="tab" data-tab="approve">Voir</button>'});
+  });
+  S.redemptions.filter(function(r){return r.status==='pending';}).sort(function(a,b){return a.ts-b.ts;}).forEach(function(r){
+    var x=mById(r.memberId); if(!x) return;
+    it.push({who:x,t:r.label,s:x.name+' · demande de récompense',pts:-r.cost,btn:'<button class="btn small primary" data-act="tab" data-tab="approve">Voir</button>'});
+  });
+  S.pots.filter(function(p){return potLive(p)&&p.status==='pending';}).forEach(function(p){
+    var x=mById(p.createdBy);
+    it.push({who:x,t:'Cagnotte « '+p.name+' »',s:(x?x.name+' · ':'')+'à valider',btn:'<button class="btn small primary" data-act="pot" data-id="'+esc(p.id)+'">Voir</button>'});
+  });
+  S.pots.filter(function(p){return potLive(p)&&p.status==='claiming';}).forEach(function(p){
+    var x=mById(p.createdBy);
+    it.push({who:x,t:'Cagnotte « '+p.name+' »',s:'Choix à valider : '+(p.chosenLabel||''),btn:'<button class="btn small primary" data-act="pot" data-id="'+esc(p.id)+'">Voir</button>'});
+  });
+  S.redemptions.filter(function(r){return r.status==='approved'&&!r.usedTs;}).sort(function(a,b){return (a.decidedTs||0)-(b.decidedTs||0);}).forEach(function(r){
+    var x=mById(r.memberId); if(!x) return;
+    it.push({who:x,t:r.label,s:x.name+' attend sa récompense',btn:'<button class="btn small" data-act="rewardUsed" data-id="'+esc(r.id)+'">Remise</button>'});
+  });
+  return it;
+}
 function homeAdult(m){
-  var pc=pendingCount();
   var ms=S.members.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);});
-  var out='';
-  if(pc) out+='<button class="alert" data-act="tab" data-tab="approve"><strong>'+pc+' à valider</strong><span>Voir les demandes</span></button>';
+  var items=todoItems(), shown=items.slice(0,6);
+  var out='<section class="card todo"><div class="section-title"><h3>À faire</h3>'+(items.length?'<span class="pill pending">'+items.length+'</span>':'')+'</div>';
+  if(!items.length) out+='<p class="muted small" style="margin-top:6px">Tout est à jour. Rien n’attend ta validation.</p>';
+  else {
+    out+='<ul class="list">'+shown.map(function(x){
+      return '<li><div class="trow">'+(x.who?avatar(x.who):'')+'<div class="tx">'+esc(x.t)+'<small>'+esc(x.s)+'</small></div>'+(x.pts?'<span class="hpts '+(x.pts>0?'plus':'minus')+'">'+sg(x.pts)+'</span>':'')+x.btn+'</div></li>';
+    }).join('')+'</ul>';
+    if(items.length>shown.length) out+='<button class="link" data-act="tab" data-tab="approve">Voir les '+(items.length-shown.length)+' autres</button>';
+  }
+  out+='</section>';
   out+=potsSection(m);
-  out+='<section class="card"><div class="section-title"><h3>La famille</h3><span class="muted small">Touche un nom pour voir le détail</span></div><ul class="list">'+
+  out+='<section class="card"><div class="section-title"><h3>La famille</h3><span class="muted small">Touche un nom pour le détail</span></div><div class="chips2">'+
     ms.map(function(x){
       var wt=waiting(x.id);
-      return '<li><div class="mrow"><button class="open" data-act="member" data-id="'+esc(x.id)+'">'+avatar(x)+'<span class="mmain"><span class="hlabel">'+esc(x.name)+'</span><br><span class="muted small">'+(wt?'+'+wt+' en attente':(isAdult(x)?'Adulte':'Enfant'))+'</span></span><span class="bal">'+balance(x.id)+'</span></button>'+
-      '<div class="mactions"><button class="btn stepbtn" data-act="adjust" data-id="'+esc(x.id)+'" data-sign="1" aria-label="Ajouter des points à '+esc(x.name)+'">+</button><button class="btn stepbtn" data-act="adjust" data-id="'+esc(x.id)+'" data-sign="-1" aria-label="Retirer des points à '+esc(x.name)+'">−</button></div></div></li>';
-    }).join('')+'</ul></section>';
+      return '<button class="pc" data-act="member" data-id="'+esc(x.id)+'" aria-label="'+esc(x.name)+', '+balance(x.id)+' points">'+avatar(x)+'<span>'+esc(x.name)+'</span><b>'+balance(x.id)+'</b>'+(wt?'<small class="muted">+'+wt+'</small>':'')+'</button>';
+    }).join('')+'</div></section>';
   return out;
 }
 function approveView(){
@@ -272,19 +302,58 @@ function approveView(){
   if(rs.length) out+='<section class="card"><h3>Récompenses demandées</h3><ul class="list">'+rs.map(function(r){return row('redemptions',r,r.label,-r.cost);}).join('')+'</ul></section>';
   return out;
 }
-function rankView(m){
-  var rows=S.members.map(function(x){return {m:x,s:periodScore(x.id,rankPeriod)};}).sort(function(a,b){return b.s-a.s||a.m.name.localeCompare(b.m.name,'fr');});
+function prevStart(p){
+  var d=new Date(periodStart(p));
+  if(p==='week') d.setDate(d.getDate()-7);
+  else if(p==='month') d.setMonth(d.getMonth()-1);
+  return d.getTime();
+}
+function scoreBetween(id,from,to){
+  return sum(S.entries.filter(function(e){var t=e.decidedTs||e.ts||0;return e.memberId===id&&e.status==='approved'&&t>=from&&t<to;}),function(e){return e.points;});
+}
+function rankRows(scoreOf){
+  var rows=S.members.map(function(x){return {m:x,s:scoreOf(x.id)};}).sort(function(a,b){return b.s-a.s||a.m.name.localeCompare(b.m.name,'fr');});
   var rank=0, prev=null;
   rows.forEach(function(r,i){ if(r.s!==prev){rank=i+1;prev=r.s;} r.rank=rank; });
+  return rows;
+}
+function rankView(m){
+  var rows=rankRows(function(id){return periodScore(id,rankPeriod);});
   var allZero=rows.every(function(r){return r.s===0;});
+  var prevRank={}, hasPrev=false;
+  if(rankPeriod!=='all'){
+    var ps=prevStart(rankPeriod), pe=periodStart(rankPeriod);
+    var pr=rankRows(function(id){return scoreBetween(id,ps,pe);});
+    hasPrev=pr.some(function(r){return r.s>0;});
+    pr.forEach(function(r){prevRank[r.m.id]=r.rank;});
+  }
   var labels={week:'Points gagnés cette semaine',month:'Points gagnés ce mois-ci',all:'Points gagnés depuis le début'};
+  var champWord={week:'de la semaine',month:'du mois',all:'de tous les temps'}[rankPeriod];
   var seg='<div class="seg" role="group" aria-label="Période">'+[['week','Semaine'],['month','Mois'],['all','Total']].map(function(p){return '<button class="o" data-act="rank" data-p="'+p[0]+'" aria-pressed="'+(rankPeriod===p[0])+'">'+p[1]+'</button>';}).join('')+'</div>';
+  var scored=rows.filter(function(r){return r.s>0;});
+  var champs=scored.filter(function(r){return r.rank===1;});
+  var crown=champs.length?'<div style="text-align:center"><span class="crown">Champion '+champWord+' : '+champs.map(function(r){return esc(r.m.name);}).join(' et ')+'</span></div>':'';
+  var usePodium=scored.length>=2, podRows=[], rest=rows;
+  var podHtml='';
+  if(usePodium){
+    podRows=scored.slice(0,3); rest=rows.filter(function(r){return podRows.indexOf(r)<0;});
+    var order=podRows.length===3?[podRows[1],podRows[0],podRows[2]]:[podRows[1],podRows[0]];
+    podHtml='<div class="podium">'+order.map(function(r){
+      var cls=r.rank===1?'g':(r.rank===2?'s':'b'), me=r.m.id===m.id;
+      return '<button class="pod '+cls+'" data-act="member" data-id="'+esc(r.m.id)+'">'+avatar(r.m)+'<span class="rname">'+esc(r.m.name)+(me?' (toi)':'')+'</span><span class="blk">'+r.rank+'</span><span class="pts">'+r.s+'</span></button>';
+    }).join('')+'</div>';
+  }
+  function trend(r){
+    if(!hasPrev) return '';
+    var d=(prevRank[r.m.id]||rows.length)-r.rank;
+    return d>0?'<span class="up">▲ '+d+'</span>':(d<0?'<span class="dn">▼ '+(-d)+'</span>':'<span class="eq">=</span>');
+  }
   return '<section class="card" style="display:flex;flex-direction:column;gap:12px"><h2>Classement</h2>'+seg+'<p class="muted small">'+labels[rankPeriod]+'</p>'+
-    (allZero?'<p class="note">Personne n’a encore de points sur cette période.</p>':'')+
-    '<ul class="list">'+rows.map(function(r){
+    (allZero?'<p class="note">Personne n’a encore de points sur cette période.</p>':crown+podHtml)+
+    (rest.length?'<ul class="list">'+rest.map(function(r){
       var me=r.m.id===m.id;
-      return '<li><button class="rrow'+(r.rank===1&&r.s>0?' first':'')+(me?' me':'')+'" data-act="member" data-id="'+esc(r.m.id)+'"><span class="rnk">'+(allZero?'–':r.rank)+'</span>'+avatar(r.m)+'<span class="rname">'+esc(r.m.name)+(me?' (toi)':'')+'</span><span class="rpts">'+r.s+'</span></button></li>';
-    }).join('')+'</ul></section>';
+      return '<li><button class="rrow'+(r.rank===1&&r.s>0?' first':'')+(me?' me':'')+'" data-act="member" data-id="'+esc(r.m.id)+'"><span class="rnk">'+(allZero?'–':r.rank)+'</span>'+avatar(r.m)+'<span class="rname">'+esc(r.m.name)+(me?' (toi)':'')+'</span>'+trend(r)+'<span class="rpts">'+r.s+'</span></button></li>';
+    }).join('')+'</ul>':'')+'</section>';
 }
 function rewardsView(m){
   var bal=balance(m.id), adult=isAdult(m);

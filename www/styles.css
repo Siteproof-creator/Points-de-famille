@@ -244,3 +244,25 @@ button.rrow .rname{flex:1;min-width:0}
 .potopen .bal{font-family:var(--font-display);font-weight:800;font-size:26px;font-variant-numeric:tabular-nums}
 .potrw{display:flex;flex-direction:column;gap:8px;padding:10px 0}
 .potacts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+
+/* accueil adulte : à faire + famille compacte ; classement : podium */
+.trow{display:flex;align-items:center;gap:10px;padding:10px 0}
+.trow .tx{flex:1;min-width:0;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.trow .tx small{display:block;font-weight:400;color:var(--muted)}
+.todo .list li+li .trow{border-top:1px solid var(--line)}
+.chips2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pc{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:99px;background:var(--field);border:1px solid var(--line);font:inherit;font-weight:700;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pc b{font-family:var(--font-display);font-size:18px;font-variant-numeric:tabular-nums}
+.pc .avatar{width:32px;height:32px;font-size:15px}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-top:6px}
+.pod{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pod .rname{flex:none;max-width:100%}
+.pod .blk{width:100%;border-radius:16px 16px 6px 6px;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:28px}
+.pod.g .blk{height:112px;background:linear-gradient(#F2C14E,#D9A21F);color:#3b2a00}
+.pod.s .blk{height:82px;background:linear-gradient(#C9D2D9,#9AA7B1);color:#202a31}
+.pod.b .blk{height:60px;background:linear-gradient(#D69A6A,#B8743F);color:#3a1d08}
+.pod .pts{font-family:var(--font-display);font-size:20px;font-variant-numeric:tabular-nums}
+.crown{display:inline-block;font-size:13px;font-weight:800;color:#6b4b00;background:#FFF1C9;border-radius:99px;padding:3px 12px}
+.up{color:var(--good);font-weight:800;font-size:13px;white-space:nowrap}
+.dn{color:var(--bad);font-weight:800;font-size:13px;white-space:nowrap}
+.eq{color:var(--muted);font-weight:800;font-size:13px}
