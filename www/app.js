@@ -3,12 +3,12 @@
 var $app=document.getElementById('app'), $sheet=document.getElementById('sheetRoot'), $toast=document.getElementById('toast');
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
 var uid=function(){try{return crypto.randomUUID();}catch(e){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);});}};
-var COLL=['members','entries','rewards','redemptions','tasks','family','pots','potMembers','potRewards'];
+var COLL=['members','entries','rewards','redemptions','tasks','family','pots','potMembers','potRewards','events'];
 var S={}, ready={};
 COLL.forEach(function(c){S[c]=[];});
 var store=null, sb=null, slow=false, dirty=false, booted=false, bootError='', offline=false, welcomeMode='join', familyId=null, rt=null, poll=null, refreshTimer=null;
 var CFG=window.PF_CONFIG||{};
-var TABLE={members:'members',entries:'entries',rewards:'rewards',redemptions:'redemptions',tasks:'tasks',family:'families',pots:'pots',potMembers:'pot_members',potRewards:'pot_rewards'};
+var TABLE={members:'members',entries:'entries',rewards:'rewards',redemptions:'redemptions',tasks:'tasks',family:'families',pots:'pots',potMembers:'pot_members',potRewards:'pot_rewards',events:'events'};
 var JOIN_ERR={bad_code:'Code de famille incorrect.',no_profile:'Aucun profil à ce prénom. Demande à un adulte de t’ajouter dans l’onglet Famille.',throttled:'Trop d’essais. Réessaie dans quelques minutes.',not_signed_in:'Connexion impossible. Réessaie.'};
 var sess=null, tab='home', rankPeriod='week', sheet=null, toastTimer=null;
 var photoCache={}, photoLoading={}, earnPhoto=null;
@@ -325,6 +325,7 @@ var ICON={
   trophy:svg('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4"/><path d="M12 13v4M8 20h8M10 17h4"/>'),
   gift:svg('<rect x="3" y="8" width="18" height="4"/><path d="M5 12v8h14v-8M12 8v12"/><path d="M12 8c-2 0-4-1-4-3s3-2 4 1c1-3 4-3 4-1s-2 3-4 3z"/>'),
   user:svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+  cal:svg('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
   users:svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5a5 5 0 0 1 4.5 5"/>')
 };
 
@@ -360,15 +361,18 @@ function topbar(m){
   return '<header class="topbar"><button class="avbtn" data-act="avatarEdit" data-id="'+esc(m.id)+'" aria-label="Changer mon avatar">'+avatar(m,'lg')+'</button><div class="who"><div class="hi">Salut '+esc(m.name)+'</div><div class="muted small">'+(isAdult(m)?'Adulte':'Enfant')+'</div></div><button class="btn small" data-act="logout">Quitter</button></header>';
 }
 function tabsFor(m){
-  var t=[['home','Accueil',ICON.home]];
-  if(isAdult(m)) t.push(['approve','À valider',ICON.check]);
-  t.push(['rank','Classement',ICON.trophy],['rewards','Récompenses',ICON.gift]);
-  if(isAdult(m)) t.push(['family','Famille',ICON.users]); else t.push(['me','Moi',ICON.user]);
+  var t=[['home','Accueil',ICON.home]], cal=['cal','Planning',ICON.cal];
+  if(isAdult(m)){
+    t.push(['approve','À valider',ICON.check],cal,['rank','Classement',ICON.trophy],['rewards','Récompenses',ICON.gift],['family','Famille',ICON.users]);
+  } else {
+    t.push(['rank','Classement',ICON.trophy],cal,['rewards','Récompenses',ICON.gift],['me','Moi',ICON.user]);
+  }
   return t;
 }
 function tabbar(m){
   var pc=pendingCount();
   return '<nav class="tabbar" aria-label="Navigation"><div class="tabs n'+tabsFor(m).length+'">'+tabsFor(m).map(function(t){
+    if(t[0]==='cal') return '<button class="tab cal" data-act="tab" data-tab="cal"'+(tab==='cal'?' aria-current="page"':'')+'><span class="calbtn">'+t[2]+'</span><span>'+t[1]+'</span></button>';
     return '<button class="tab" data-act="tab" data-tab="'+t[0]+'"'+(tab===t[0]?' aria-current="page"':'')+'>'+t[2]+'<span>'+t[1]+'</span>'+(t[0]==='approve'&&pc?'<span class="badge">'+pc+'</span>':'')+'</button>';
   }).join('')+'</div></nav>';
 }
@@ -500,6 +504,40 @@ function meView(m){
   }).join('')+'</div></section>';
   return meHeader(m)+levelCard(m)+strk+objectiveCard(m)+badges+
     '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:30})+'</section>';
+}
+/* ---------- calendrier familial ---------- */
+var calMonth=null, calDay=null, calFilter='all';
+function dkey(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function parseDay(k){ var a=k.split('-'); return new Date(+a[0],+a[1]-1,+a[2]); }
+function frDay(k){ var t=parseDay(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); return t.charAt(0).toUpperCase()+t.slice(1); }
+function eventsOn(k,m){
+  return S.events.filter(function(e){ return e.day===k&&(calFilter!=='me'||e.memberIds.indexOf(m.id)>=0); })
+    .sort(function(a,b){ return (a.time||'')<(b.time||'')?-1:((a.time||'')>(b.time||'')?1:a.title.localeCompare(b.title,'fr')); });
+}
+function calView(m){
+  var today=dkey(new Date());
+  if(!calDay) calDay=today;
+  if(!calMonth){ var c=parseDay(calDay); calMonth=new Date(c.getFullYear(),c.getMonth(),1); }
+  var y=calMonth.getFullYear(), mo=calMonth.getMonth(), first=(new Date(y,mo,1).getDay()+6)%7, n=new Date(y,mo+1,0).getDate(), adult=isAdult(m);
+  var title=calMonth.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  var h='<section class="card cal"><div class="calhead"><button class="btn small" data-act="calPrev" aria-label="Mois précédent">‹</button><h3>'+esc(title.charAt(0).toUpperCase()+title.slice(1))+'</h3><button class="btn small" data-act="calNext" aria-label="Mois suivant">›</button></div>'+
+    '<div class="calgrid">'+['L','M','M','J','V','S','D'].map(function(x){return '<span class="dow">'+x+'</span>';}).join('');
+  for(var i=0;i<first;i++) h+='<span></span>';
+  for(var d=1;d<=n;d++){
+    var k=y+'-'+('0'+(mo+1)).slice(-2)+'-'+('0'+d).slice(-2), c2=eventsOn(k,m).length;
+    h+='<button class="day'+(k===today?' today':'')+(k===calDay?' sel':'')+'" data-act="calDay" data-day="'+k+'" aria-label="'+esc(frDay(k))+'"><span>'+d+'</span><i class="dots">'+(c2?'<b></b>'+(c2>1?'<b></b>':'')+(c2>2?'<b></b>':''):'')+'</i></button>';
+  }
+  h+='</div><div class="calfoot"><div class="chips2"><button class="btn small'+(calFilter==='all'?' primary':'')+'" data-act="calFilter" data-f="all">Toute la famille</button><button class="btn small'+(calFilter==='me'?' primary':'')+'" data-act="calFilter" data-f="me">Moi</button></div><button class="link" data-act="calToday">Aujourd’hui</button></div></section>';
+  var evs=eventsOn(calDay,m);
+  h+='<section class="card"><div class="section-title"><h3>'+esc(frDay(calDay))+'</h3>'+(adult?'<button class="btn small primary" data-act="evNew">Ajouter</button>':'')+'</div>';
+  if(!evs.length) h+='<p class="muted">'+(adult?'Rien de prévu ce jour-là. Appuie sur « Ajouter » pour planifier une tâche.':'Rien de prévu ce jour-là.')+'</p>';
+  else h+='<ul class="list">'+evs.map(function(e){
+    var who=e.memberIds.map(function(id){return mById(id);}).filter(Boolean), mine=e.memberIds.indexOf(m.id)>=0;
+    var row='<span class="evtime">'+(e.time?esc(e.time):'Journée')+'</span><div class="mmain"><div class="hlabel">'+esc(e.title)+'</div>'+(e.note?'<div class="muted small">'+esc(e.note)+'</div>':'')+
+      '<div class="evwho">'+who.map(function(x){return '<span class="evp">'+avatar(x,'sm')+esc(x.name)+'</span>';}).join('')+'</div></div>'+(mine?'<span class="evmine">Pour toi</span>':'');
+    return '<li>'+(adult?'<button class="rrow ev'+(mine?' mine':'')+'" data-act="evEdit" data-id="'+esc(e.id)+'">'+row+'</button>':'<div class="rrow ev'+(mine?' mine':'')+'">'+row+'</div>')+'</li>';
+  }).join('')+'</ul>';
+  return h+'</section>';
 }
 function meAdult(m){
   return '<div class="section-title" style="margin-top:6px"><h3>Toi</h3></div>'+meHeader(m)+levelCard(m)+objectiveCard(m)+
@@ -678,11 +716,13 @@ function render(){
   else if(tab==='rewards') body=rewardsView(m);
   else if(tab==='family') body=familyView();
   else if(tab==='me') body=meView(m);
+  else if(tab==='cal') body=calView(m);
   if(tab==='home') body+=pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
   if(sheet&&(sheet.type==='member'||sheet.type==='pot')) renderSheet();
 }
+document.addEventListener('input',function(e){ var t=e.target; if(t&&t.id==='f-time'&&t.value){ var a=document.getElementById('f-allday'); if(a) a.checked=false; } });
 document.addEventListener('focusout',function(){ if(dirty) setTimeout(render,80); });
 
 /* ---------- sheets ---------- */
@@ -748,6 +788,21 @@ function sheetBody(){
     return '<h2>Ajouter un membre</h2><form data-form="addMember"><div class="field"><label for="f-name">Prénom</label><input id="f-name" name="name" type="text" maxlength="30" autocomplete="off" required></div>'+
     '<div class="field"><span class="lbl">Rôle</span><div class="seg"><label><input type="radio" name="role" value="child" checked><span>Enfant</span></label><label><input type="radio" name="role" value="adult"><span>Adulte</span></label></div><span class="muted small">Le rôle décide ce que la personne pourra faire quand elle rejoindra avec son prénom et le code de famille.</span></div>'+
     '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Ajouter</button></form>';
+  }
+  if(s.type==='ev'){
+    var ev=s.id?S.events.find(function(x){return x.id===s.id;}):null; if(s.id&&!ev) return '';
+    var tl2=S.tasks.slice().sort(function(a,b){return a.label.localeCompare(b.label,'fr');}), sel=ev?ev.memberIds:[], isTask=ev&&ev.taskId&&tl2.some(function(t){return t.id===ev.taskId;});
+    var allday=!ev||!ev.time, ppl=S.members.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+    return '<h2>'+(ev?'Modifier au planning':'Planifier une tâche')+'</h2><form data-form="ev" data-id="'+(ev?esc(ev.id):'')+'">'+
+      '<div class="field"><label for="f-task">Tâche</label><select id="f-task" name="task"><option value="">Autre tâche (à écrire)</option>'+tl2.map(function(t){return '<option value="'+esc(t.id)+'"'+(isTask&&ev.taskId===t.id?' selected':'')+'>'+esc(t.label)+'</option>';}).join('')+'</select></div>'+
+      '<div class="field"><label for="f-title">Nom de la tâche (si « Autre »)</label><input id="f-title" name="title" type="text" maxlength="60" autocomplete="off" value="'+esc(ev&&!isTask?ev.title:'')+'" placeholder="Ex. : Sortir le chien"></div>'+
+      '<div class="field"><span class="lbl">Qui ?</span><div class="tasklist">'+ppl.map(function(x){return '<label class="taskopt"><input type="checkbox" name="who" value="'+esc(x.id)+'"'+(sel.indexOf(x.id)>=0?' checked':'')+'><span class="tbody"><span class="evp">'+avatar(x,'sm')+esc(x.name)+'</span></span></label>';}).join('')+'</div></div>'+
+      '<div class="field"><label for="f-day">Jour</label><input id="f-day" name="day" type="date" required value="'+esc(ev?ev.day:s.day)+'"></div>'+
+      '<div class="field"><label class="taskopt"><input type="checkbox" id="f-allday" name="allday"'+(allday?' checked':'')+'><span class="tbody"><span>Toute la journée</span></span></label></div>'+
+      '<div class="field"><label for="f-time">Heure</label><input id="f-time" name="time" type="time" value="'+esc(ev&&ev.time?ev.time:'')+'"></div>'+
+      '<div class="field"><label for="f-note">Note (facultatif)</label><input id="f-note" name="note" type="text" maxlength="200" autocomplete="off" value="'+esc(ev?ev.note:'')+'"></div>'+
+      '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Enregistrer</button>'+
+      (ev?'<button class="btn danger block" type="button" data-act="evDelete" data-id="'+esc(ev.id)+'" style="margin-top:8px">Supprimer</button>':'')+'</form>';
   }
   if(s.type==='avatar'){
     var am=mById(s.id); if(!am) return '';
@@ -871,6 +926,16 @@ async function act(name,ds){
       if(ds.mode==='avatar'){ sheet.cfg=sheet.cfg||Object.assign({},AV_DEF); sheet.photo=null; }
       else { sheet.cfg=null; sheet.photo=null; sheet.letter=true; }
       avRender(); break;
+    case 'calPrev': calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()-1,1); render(); break;
+    case 'calNext': calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,1); render(); break;
+    case 'calDay': calDay=ds.day; render(); break;
+    case 'calFilter': calFilter=ds.f; render(); break;
+    case 'calToday': calDay=dkey(new Date()); calMonth=null; render(); break;
+    case 'evNew': openSheet({type:'ev',id:null,day:calDay||dkey(new Date())}); break;
+    case 'evEdit': openSheet({type:'ev',id:ds.id}); break;
+    case 'evDelete':
+      if(await w(async function(){ dbErr(await sb.rpc('event_delete',{p_id:ds.id})); })){ closeSheet(); toast('Supprimé du planning.'); }
+      break;
     case 'avTab': sheet.tab=ds.tab; avRender(); break;
     case 'avRandom': {
       var rc={}; Object.keys(AVK).forEach(function(k){ rc[k]=Math.floor(Math.random()*AV[AVK[k]].length); });
@@ -985,6 +1050,16 @@ document.addEventListener('submit',async function(e){
       await afterLink('family');
       toast('Famille créée. Voici ton code.');
     }
+    else if(kind==='ev'){
+      var evTask=g('task'), evTitle=g('title'), evWho=fd.getAll('who'), evDay=g('day'), evAll=!!fd.get('allday'), evTime=g('time');
+      if(!evTask&&!evTitle){ err('Choisis une tâche ou écris-en une.'); return; }
+      if(!evWho.length){ err('Choisis au moins une personne.'); return; }
+      if(!evDay){ err('Choisis un jour.'); return; }
+      if(!evAll&&!evTime){ err('Choisis une heure, ou coche « Toute la journée ».'); return; }
+      var er=await sb.rpc('event_save',{p_id:form.dataset.id||null,p_title:evTask?'':evTitle,p_task:evTask||null,p_day:evDay,p_time:evAll?null:evTime,p_members:evWho,p_note:g('note')||null});
+      if(er.error){ err(er.error.code==='P0001'?er.error.message:'Impossible pour le moment. Vérifie ta connexion.'); return; }
+      calDay=evDay; calMonth=null; scheduleRefresh(); closeSheet(); toast('Ajouté au planning. Les personnes sont prévenues.');
+    }
     else if(kind==='potNew'){
       var pn=g('name'), pa=parseInt(g('amount'),10), inv=fd.getAll('inv'), dl=g('deadline');
       if(!pn){ err('Donne un nom à la cagnotte.'); return; }
@@ -1077,6 +1152,7 @@ var fromRow={
   pots:function(r){return {id:r.id,name:r.name,createdBy:r.created_by,status:r.status,deadline:r.deadline?Date.parse(r.deadline):null,chosenId:r.chosen_reward_id,chosenLabel:r.chosen_label,chosenCost:r.chosen_cost,ts:Date.parse(r.created_at),usedTs:r.used_at?Date.parse(r.used_at):null};},
   potMembers:function(r){return {id:r.pot_id+':'+r.member_id,potId:r.pot_id,memberId:r.member_id,status:r.status,amount:r.amount};},
   potRewards:function(r){return {id:r.id,potId:r.pot_id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
+  events:function(r){return {id:r.id,taskId:r.task_id||null,title:r.title,day:r.day,time:r.start_time?String(r.start_time).slice(0,5):null,memberIds:r.member_ids||[],note:r.note||'',createdBy:r.created_by,ts:Date.parse(r.created_at)};},
   family:function(r){return {id:'main',code:r.code};}
 };
 function dbErr(r){ if(r&&r.error) throw r.error; return r; }
@@ -1155,7 +1231,7 @@ function onVisible(){ if(document.visibilityState==='visible') loadAll(); }
 function startData(){
   if(rt||!sb) return;
   rt=sb.channel('pf-'+familyId);
-  ['members','entries','rewards','redemptions','tasks','pots','pot_members','pot_rewards'].forEach(function(t){
+  ['members','entries','rewards','redemptions','tasks','pots','pot_members','pot_rewards','events'].forEach(function(t){
     rt.on('postgres_changes',{event:'*',schema:'public',table:t},scheduleRefresh);
   });
   rt.subscribe();
