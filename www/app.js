@@ -867,9 +867,14 @@ function openSheet(s){
   }
 }
 function avRender(){
-  var sc=$sheet.querySelector('.sheet'), top=sc?sc.scrollTop:0;
-  renderSheet();
-  sc=$sheet.querySelector('.sheet'); if(sc) sc.scrollTop=top;
+  /* Met à jour la fenêtre sur place : elle ne se recrée pas, donc pas d'animation ni de saut de défilement. */
+  var sh=$sheet.querySelector('.sheet'), body=sheet?sheetBody():'';
+  if(!sh||!body){ renderSheet(); return; }
+  var top=sh.scrollTop, close=sh.querySelector('.close');
+  sh.innerHTML=''; if(close) sh.appendChild(close);
+  sh.insertAdjacentHTML('beforeend',body);
+  sh.scrollTop=top;
+  requestAnimationFrame(function(){ sh.scrollTop=top; });
 }
 function closeSheet(){ sheet=null; renderSheet(); }
 
