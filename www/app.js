@@ -50,7 +50,7 @@ var AV={
   eyec:['#2b1b12','#5a3a22','#8a6a2b','#3f8f5a','#3b82c4','#7f8c99'],
   outc:['#e74c3c','#3b82f6','#1e3a5f','#10b981','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#2b2d33','#f4f4f6','#9ca3af','#8b5a2b'],
   face:['Ovale','Ronde','Allongé','Carré'],
-  hair:['Chauve','Rasé','Courts','Raie de côté','Pointus','Toupet','Frange droite','Carré','Mi-longs plongeants','Longs lisses','Longs ondulés','Épaules','Afro','Bouclés','Locks','Chignon haut','Chignon bas','Queue de cheval','Couettes','Tresses','Queue haute','Crête','Dégarni','Dégradé'],
+  hair:['Chauve','Rasé','Courts','Raie de côté','Pointus','Toupet','Frange droite','Carré','Mi-longs plongeants','Longs lisses','Longs ondulés','Épaules','Afro','Bouclés','Locks','Chignon haut','Chignon côté','Queue de cheval','Couettes','Tresses','Queue haute','Crête','Dégarni','Dégradé'],
   brow:['Fins','Épais','Droits','Arqués','Froncés'],
   eyes:['Amande','Ronds','Grands','Contents','Mi-clos','Cils'],
   nose:['Petit','Rond','Pointu','Large'],
@@ -85,35 +85,46 @@ function avMix(a,b,t){
 }
 var avUid=0;
 var AVF=[[20,16,68,8,6],[22,20,66,12,6],[18,14,72,7,5],[21,20,67,13,3]];
-function avHair(i,H,sk){
-  var D=avMix(H,'#000000',.28), L=avMix(H,'#ffffff',.3), bk='', fr='', hl=function(d){return '<path d="'+d+'" fill="none" stroke="'+L+'" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"/>';};
-  var f=function(d,c){return '<path d="'+d+'" fill="'+(c||H)+'"/>';};
-  var CAP='M26 46C24 24 37 16 50 16C63 16 76 24 74 46C72 38 69 33 64 30C58 34 42 34 36 30C31 33 28 38 26 46Z';
-  var side='<path d="M27 46L28 56L32 54L33 44Z M73 46L72 56L68 54L67 44Z" fill="'+H+'"/>';
+function avHair(i,H,w,sk){
+  var D=avMix(H,'#000000',.32), L=avMix(H,'#ffffff',.34), l=50-w, r=50+w, bk='', fr='';
+  var P=function(d,c,o){return '<path d="'+d+'" fill="'+(c||H)+'"'+(o?' opacity="'+o+'"':'')+'/>';};
+  var T=function(d,c,wd,o){return '<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+(wd||1.1)+'" stroke-opacity="'+(o||.5)+'" stroke-linecap="round"/>';};
+  var crown=function(y){y=y||0; return T('M'+(l+6)+' '+(21+y)+'C'+(l+14)+' '+(14+y)+' '+(r-14)+' '+(14+y)+' '+(r-6)+' '+(21+y),L,1.8,.55)+T('M'+(l+10)+' '+(26+y)+'C'+(l+18)+' '+(19+y)+' '+(r-18)+' '+(19+y)+' '+(r-10)+' '+(26+y),L,1,.35);};
+  var cap=function(top,hlC,hlS,sideY){
+    return 'M'+(l-3)+' '+sideY+'C'+(l-6)+' '+(top+14)+' '+(l+6)+' '+top+' 50 '+top+'C'+(r-6)+' '+top+' '+(r+6)+' '+(top+14)+' '+(r+3)+' '+sideY+
+      'C'+(r+2)+' '+(sideY-6)+' '+r+' '+(hlS+2)+' '+(r-4)+' '+hlS+'C'+(r-10)+' '+hlC+' '+(l+10)+' '+hlC+' '+(l+4)+' '+hlS+'C'+l+' '+(hlS+2)+' '+(l-2)+' '+(sideY-6)+' '+(l-3)+' '+sideY+'Z';
+  };
+  var back=function(bottom,flare,top){ top=top||12; return 'M'+(l-3)+' 42C'+(l-8)+' 20 '+(l+6)+' '+top+' 50 '+top+'C'+(r-6)+' '+top+' '+(r+8)+' 20 '+(r+3)+' 42L'+(r+6+flare)+' '+(bottom-6)+'Q'+(r+6+flare)+' '+bottom+' '+(r-2+flare)+' '+bottom+'L'+(l+2-flare)+' '+bottom+'Q'+(l-6-flare)+' '+bottom+' '+(l-6-flare)+' '+(bottom-6)+'Z';};
+  var lock=function(side,bottom,flare,wave){
+    var s=side<0?-1:1, x=side<0?l:r, X=function(q){return (x+s*q).toFixed(1);}, d;
+    if(wave) d='M'+X(4)+' 34C'+X(9)+' 50 '+X(4)+' 62 '+X(8)+' 72C'+X(12)+' 82 '+X(7)+' '+(bottom-6)+' '+X(10+flare)+' '+bottom+'Q'+X(5)+' '+(bottom+3)+' '+X(1)+' '+(bottom-4)+'C'+X(-2)+' 84 '+X(2)+' 78 '+X(-1)+' 68C'+X(-3)+' 60 '+X(-2)+' 52 '+X(-1)+' 46C'+X(-1)+' 40 '+X(-3)+' 37 '+X(-4)+' 34Z';
+    else d='M'+X(4)+' 34C'+X(8)+' 52 '+X(7)+' 72 '+X(10+flare)+' '+bottom+'Q'+X(5)+' '+(bottom+3)+' '+X(0.5)+' '+(bottom-1)+'C'+X(-1.5)+' 74 '+X(-2.5)+' 60 '+X(-1)+' 48C'+X(-0.5)+' 42 '+X(-3)+' 38 '+X(-4)+' 34Z';
+    return P(d);
+  };
   switch(i){
-    case 1: fr='<path d="'+CAP+'" fill="'+H+'" opacity=".35"/>'; break;
-    case 2: fr=f(CAP)+hl('M38 20C46 16 56 16 64 21'); break;
-    case 3: fr=f('M26 46C23 22 40 15 54 16C68 17 77 28 74 46C72 38 70 34 66 31C56 30 44 27 36 32C31 35 28 40 26 46Z')+'<path d="M44 17C46 24 43 28 38 31" fill="none" stroke="'+D+'" stroke-width="1.4"/>'+hl('M50 19C58 18 66 21 70 27'); break;
-    case 4: fr=f('M26 46L27 26L35 33L40 14L47 28L52 10L57 28L65 14L67 33L73 26L74 46C72 38 69 33 64 31C58 34 42 34 36 31C31 34 28 40 26 46Z'); break;
-    case 5: fr=f('M26 46C21 24 28 8 52 8C70 8 78 22 74 46C72 38 70 34 64 32C58 22 44 24 36 32C31 35 28 40 26 46Z')+hl('M36 18C44 10 58 10 68 18'); break;
-    case 6: fr=f('M25 54C21 24 36 15 50 15C64 15 79 24 75 54C73 44 71 37 66 34L34 34C29 37 27 44 25 54Z')+hl('M36 20C46 16 56 16 66 20'); break;
-    case 7: bk=f('M24 66C19 28 34 13 50 13C66 13 81 28 76 66C75 71 68 71 66 66L34 66C32 71 25 71 24 66Z'); fr=f('M27 46C26 24 40 17 50 17C62 17 75 24 73 46C69 36 62 31 50 31C38 31 31 36 27 46Z')+hl('M34 22C42 18 58 18 66 22'); break;
-    case 8: bk=f('M24 82C18 30 34 13 50 13C66 13 82 30 76 82C70 82 66 76 66 68L34 68C34 76 30 82 24 82Z'); fr=f('M27 46C26 24 40 17 50 17C60 17 74 24 73 46C70 38 62 30 52 30C42 31 32 36 27 46Z')+f('M24 82L27 50L34 56C33 66 33 76 30 82Z')+f('M76 82L73 50L66 56C67 66 67 76 70 82Z'); break;
-    case 9: bk=f('M23 96C17 34 33 12 50 12C67 12 83 34 77 96L66 96L66 70L34 70L34 96Z'); fr=f('M27 46C26 24 40 17 50 17C62 17 74 24 73 46C69 36 62 31 50 31C38 31 31 36 27 46Z')+f('M26 46C24 62 26 80 24 96L33 96C32 80 34 62 34 48Z')+f('M74 46C76 62 74 80 76 96L67 96C68 80 66 62 66 48Z')+hl('M31 60C30 74 30 84 29 92'); break;
-    case 10: bk=f('M22 94C14 40 32 12 50 12C68 12 86 40 78 94C72 88 70 80 66 72L34 72C30 80 28 88 22 94Z'); fr=f('M27 46C26 24 40 17 50 17C62 17 74 24 73 46C69 36 62 31 50 31C38 31 31 36 27 46Z')+f('M26 46C22 58 28 66 24 76C22 84 26 90 22 94C32 92 34 84 32 76C30 66 34 58 34 48Z')+f('M74 46C78 58 72 66 76 76C78 84 74 90 78 94C68 92 66 84 68 76C70 66 66 58 66 48Z')+hl('M29 62C27 72 30 78 27 88'); break;
-    case 11: bk=f('M24 76C18 32 34 13 50 13C66 13 82 32 76 76C72 80 68 76 66 70L34 70C32 76 28 80 24 76Z'); fr=f('M27 46C26 24 40 17 50 17C62 17 74 24 73 46C69 36 62 31 50 31C38 31 31 36 27 46Z')+f('M26 46C25 58 27 68 26 76L33 74C32 66 34 58 34 48Z')+f('M74 46C75 58 73 68 74 76L67 74C68 66 66 58 66 48Z'); break;
-    case 12: bk='<ellipse cx="50" cy="36" rx="31" ry="28" fill="'+H+'"/><circle cx="25" cy="48" r="8" fill="'+H+'"/><circle cx="75" cy="48" r="8" fill="'+H+'"/>'; fr=f('M30 40C34 28 66 28 70 40C64 34 36 34 30 40Z')+'<g fill="'+D+'" opacity=".4"><circle cx="34" cy="26" r="2"/><circle cx="48" cy="18" r="2"/><circle cx="62" cy="22" r="2"/><circle cx="72" cy="34" r="2"/><circle cx="26" cy="38" r="2"/></g>'; break;
-    case 13: bk=''; fr=f(CAP)+'<g fill="'+H+'"><circle cx="30" cy="30" r="7"/><circle cx="40" cy="22" r="7.5"/><circle cx="51" cy="19" r="7.5"/><circle cx="62" cy="22" r="7.5"/><circle cx="71" cy="30" r="7"/><circle cx="27" cy="42" r="5"/><circle cx="73" cy="42" r="5"/></g>'+hl('M38 18C44 14 56 14 62 18'); break;
-    case 14: bk=f(CAP); fr=f(CAP)+'<g fill="'+H+'"><rect x="23" y="38" width="6" height="42" rx="3"/><rect x="30" y="42" width="5" height="40" rx="2.5"/><rect x="71" y="38" width="6" height="42" rx="3"/><rect x="65" y="42" width="5" height="40" rx="2.5"/></g><g stroke="'+D+'" stroke-width="1"><path d="M26 44L26 78M32.5 46L32.5 80M74 44L74 78M67.5 46L67.5 80"/></g>'; break;
-    case 15: bk='<circle cx="50" cy="12" r="9" fill="'+H+'"/>'; fr=f(CAP)+'<path d="M42 12Q50 17 58 12" fill="none" stroke="'+D+'" stroke-width="1.4"/>'; break;
-    case 16: bk='<circle cx="73" cy="62" r="8" fill="'+H+'"/>'; fr=f(CAP)+'<circle cx="70" cy="48" r="2.4" fill="#fbbf24"/>'; break;
-    case 17: bk=f('M66 36C90 36 86 70 80 76C74 70 80 52 66 46Z'); fr=f(CAP)+'<rect x="68" y="38" width="5" height="9" rx="2" fill="#ec4899" transform="rotate(-30 70 42)"/>'; break;
-    case 18: bk='<circle cx="19" cy="58" r="10" fill="'+H+'"/><circle cx="81" cy="58" r="10" fill="'+H+'"/>'; fr=f(CAP)+'<circle cx="26" cy="48" r="3" fill="#ec4899"/><circle cx="74" cy="48" r="3" fill="#ec4899"/>'; break;
-    case 19: bk=''; fr=f(CAP)+['24','76'].map(function(x){return '<g fill="'+H+'"><ellipse cx="'+x+'" cy="54" rx="5" ry="5"/><ellipse cx="'+x+'" cy="64" rx="4.6" ry="5"/><ellipse cx="'+x+'" cy="74" rx="4.2" ry="5"/><ellipse cx="'+x+'" cy="84" rx="3.8" ry="5"/></g><circle cx="'+x+'" cy="91" r="2.6" fill="#ec4899"/>';}).join(''); break;
-    case 20: bk=f('M58 18C70 0 90 6 86 30C84 40 80 40 78 34C82 22 72 14 64 22Z'); fr=f(CAP)+'<circle cx="64" cy="20" r="3" fill="#ec4899"/>'; break;
-    case 21: fr='<path d="'+CAP+'" fill="'+H+'" opacity=".22"/>'+f('M43 32L43 8Q50 0 57 8L57 32Q50 28 43 32Z'); break;
-    case 22: fr=f('M26 46C23 28 29 20 35 18C32 25 32 32 34 38C30 38 27 41 26 46Z')+f('M74 46C77 28 71 20 65 18C68 25 68 32 66 38C70 38 73 41 74 46Z')+'<path d="M38 22C46 18 54 18 62 22" fill="none" stroke="'+H+'" stroke-width="1.6" opacity=".7"/>'; break;
-    case 23: fr='<path d="M27 42C26 24 38 18 50 18C62 18 74 24 73 42C70 34 62 29 50 29C38 29 30 34 27 42Z" fill="'+H+'"/><path d="M27 46C26 40 27 36 27 36C30 38 31 42 32 46Z M73 46C74 40 73 36 73 36C70 38 69 42 68 46Z" fill="'+H+'" opacity=".4"/>'; break;
+    case 1: fr=P(cap(21,30,36,44),avMix(sk,H,.42)); break;
+    case 2: fr=P(cap(15,25,32,46))+crown()+T('M'+(l+4)+' 33C'+(l+8)+' 28 '+(l+14)+' 26 '+(l+20)+' 25',D,1,.35)+T('M'+(r-4)+' 33C'+(r-8)+' 28 '+(r-14)+' 26 '+(r-20)+' 25',D,1,.35); break;
+    case 3: fr=P('M'+(l-3)+' 46C'+(l-6)+' 26 '+(l+4)+' 13 48 13C64 12 '+(r+6)+' 24 '+(r+3)+' 46C'+(r+2)+' 39 '+r+' 34 '+(r-4)+' 31C'+(r-12)+' 27 58 25 46 24C40 31 '+(l+12)+' 35 '+(l+4)+' 39C'+l+' 41 '+(l-2)+' 43 '+(l-3)+' 46Z')+T('M42 14L39 26',D,1.2,.45)+T('M48 15C58 13 68 19 71 30',L,1.8,.5); break;
+    case 4: fr=P('M'+(l+1)+' 26L'+(l-1)+' 12L'+(l+9)+' 22L37 3L44 18L51 0L58 18L65 3L'+(r-9)+' 22L'+(r+1)+' 12L'+(r-1)+' 26Z')+P(cap(17,26,33,46))+T('M40 14L38 6M51 12L51 4M62 14L64 6',L,1.4,.5); break;
+    case 5: fr=P('M'+(l-3)+' 46C'+(l-9)+' 22 '+(l+1)+' 6 30 4C42 -1 64 1 72 11C'+(r+4)+' 17 '+(r+5)+' 32 '+(r+3)+' 46C'+(r+2)+' 39 '+r+' 34 '+(r-5)+' 31C'+(r-10)+' 22 50 22 42 26C'+(l+12)+' 28 '+(l+5)+' 34 '+(l+4)+' 38C'+l+' 40 '+(l-2)+' 43 '+(l-3)+' 46Z')+T('M32 12C42 5 60 5 70 14',L,2,.55)+T('M36 18C46 12 58 12 68 20',L,1,.35); break;
+    case 6: fr=P('M'+(l-5)+' 56C'+(l-9)+' 22 '+(l+4)+' 11 50 11C'+(r-4)+' 11 '+(r+9)+' 22 '+(r+5)+' 56C'+(r+4)+' 46 '+(r+2)+' 39 '+(r-2)+' 35L'+(l+2)+' 35C'+(l-2)+' 39 '+(l-4)+' 46 '+(l-5)+' 56Z')+crown(-4)+T('M'+(l+5)+' 34L'+(r-5)+' 34',D,1,.3); break;
+    case 7: bk=P(back(66,0)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-2)+' 36 '+(r-8)+' 31 50 31C'+(l+8)+' 31 '+(l+2)+' 36 '+(l-3)+' 46Z')+lock(-1,64,0)+lock(1,64,0)+crown(-1); break;
+    case 8: bk=P(back(84,2)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-2)+' 36 '+(r-10)+' 30 46 28C'+(l+10)+' 33 '+(l+3)+' 38 '+(l-3)+' 46Z')+lock(-1,84,2)+lock(1,84,2)+crown()+T('M'+(l-2)+' 66C'+(l-3)+' 74 '+(l-3)+' 80 '+(l-2)+' 83M'+(r+2)+' 66C'+(r+3)+' 74 '+(r+3)+' 80 '+(r+2)+' 83',L,1.2,.4); break;
+    case 9: bk=P(back(98,3)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-1)+' 35 '+(r-8)+' 30 50 30C'+(l+8)+' 30 '+(l+1)+' 35 '+(l-3)+' 46Z')+lock(-1,98,3)+lock(1,98,3)+crown()+T('M'+(l-4)+' 60C'+(l-6)+' 74 '+(l-5)+' 86 '+(l-6)+' 96M'+(r+4)+' 60C'+(r+6)+' 74 '+(r+5)+' 86 '+(r+6)+' 96',L,1.4,.45); break;
+    case 10: bk=P(back(96,4)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-1)+' 35 '+(r-8)+' 30 50 30C'+(l+8)+' 30 '+(l+1)+' 35 '+(l-3)+' 46Z')+lock(-1,96,4,true)+lock(1,96,4,true)+crown()+T('M'+(l-4)+' 60C'+(l-8)+' 68 '+(l-1)+' 74 '+(l-5)+' 84',L,1.4,.45)+T('M'+(r+4)+' 60C'+(r+8)+' 68 '+(r+1)+' 74 '+(r+5)+' 84',L,1.4,.45); break;
+    case 11: bk=P(back(78,1)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-2)+' 36 '+(r-8)+' 30 50 30C'+(l+8)+' 30 '+(l+2)+' 36 '+(l-3)+' 46Z')+lock(-1,78,1)+lock(1,78,1)+crown(); break;
+    case 12: bk='<ellipse cx="50" cy="35" rx="'+(w+12)+'" ry="27" fill="'+H+'"/><circle cx="'+(l-7)+'" cy="48" r="8" fill="'+H+'"/><circle cx="'+(r+7)+'" cy="48" r="8" fill="'+H+'"/>'; fr=P(cap(11,27,33,45))+'<g fill="none" stroke="'+D+'" stroke-opacity=".4" stroke-width="1.2" stroke-linecap="round"><path d="M30 24q3-4 6 0M42 15q3-4 6 0M56 14q3-4 6 0M68 22q3-4 6 0M26 36q3-4 6 0M70 36q3-4 6 0M44 24q3-4 6 0"/></g>'+crown(-4); break;
+    case 13: fr=P(cap(14,26,33,46))+'<g fill="'+H+'"><circle cx="'+(l+1)+'" cy="30" r="6.5"/><circle cx="'+(l+9)+'" cy="21" r="7"/><circle cx="37" cy="15" r="7"/><circle cx="50" cy="12" r="7.4"/><circle cx="63" cy="15" r="7"/><circle cx="'+(r-9)+'" cy="21" r="7"/><circle cx="'+(r-1)+'" cy="30" r="6.5"/><circle cx="'+(l-2)+'" cy="42" r="5"/><circle cx="'+(r+2)+'" cy="42" r="5"/></g><g fill="none" stroke="'+L+'" stroke-opacity=".5" stroke-width="1.1" stroke-linecap="round"><path d="M32 18q3-3 6 0M46 10q3-3 7 0M60 14q3-3 6 0M26 30q2-3 5-1M69 30q2-3 5-1"/></g>'; break;
+    case 14: var lk=[[l+1,84,36],[l-4,92,40],[l-8.6,78,46],[r-1,84,36],[r+4,92,40],[r+8.6,78,46]].map(function(q){var x=q[0],y0=q[2],y1=q[1]; return '<path d="M'+(x-3.4)+' '+(y0+3)+'Q'+(x-3.4)+' '+y0+' '+x+' '+y0+'Q'+(x+3.4)+' '+y0+' '+(x+3.4)+' '+(y0+3)+'L'+(x+3.2)+' '+(y1-3)+'Q'+x+' '+(y1+3)+' '+(x-3.2)+' '+(y1-3)+'Z" fill="'+H+'"/><path d="M'+x+' '+(y0+10)+'L'+x+' '+(y1-4)+'" stroke="'+D+'" stroke-opacity=".4" stroke-width="1"/>';}).join(''); bk=P(cap(13,25,32,48)); fr=P(cap(14,25,32,46))+lk+crown(); break;
+    case 15: bk='<circle cx="50" cy="11" r="8.5" fill="'+H+'"/>'; fr=P(cap(14,26,33,46))+crown()+T('M43 9C47 14 53 14 57 9',D,1.2,.45)+'<rect x="43" y="15" width="14" height="3" rx="1.5" fill="'+avMix(H,'#000000',.45)+'" opacity=".9"/>'; break;
+    case 16: bk='<circle cx="'+(r-4)+'" cy="12" r="8.5" fill="'+H+'"/>'; fr=P(cap(14,26,33,46))+crown()+T('M'+(r-10)+' 11C'+(r-6)+' 16 '+(r-2)+' 16 '+(r+1)+' 11',D,1.2,.45)+'<circle cx="'+(r-12)+'" cy="18" r="2.2" fill="#ec4899"/>'; break;
+    case 17: bk=P('M'+(r-3)+' 30C'+(r+14)+' 28 '+(r+24)+' 52 '+(r+14)+' 76C'+(r+10)+' 84 '+(r+4)+' 80 '+(r+6)+' 70C'+(r+9)+' 58 '+(r+3)+' 48 '+(r-3)+' 46Z')+T('M'+(r+8)+' 40C'+(r+16)+' 56 '+(r+10)+' 68 '+(r+9)+' 78',L,1.2,.4); fr=P(cap(14,26,33,46))+crown()+'<rect x="'+(r+1)+'" y="35" width="6" height="8" rx="2.4" fill="#ec4899" transform="rotate(-18 '+(r+4)+' 39)"/>'; break;
+    case 18: bk=P('M'+(l-1)+' 40C'+(l-18)+' 40 '+(l-22)+' 68 '+(l-14)+' 82C'+(l-8)+' 88 '+(l-2)+' 78 '+(l-1)+' 70Z')+P('M'+(r+1)+' 40C'+(r+18)+' 40 '+(r+22)+' 68 '+(r+14)+' 82C'+(r+8)+' 88 '+(r+2)+' 78 '+(r+1)+' 70Z')+T('M'+(l-8)+' 50C'+(l-14)+' 62 '+(l-12)+' 74 '+(l-11)+' 80M'+(r+8)+' 50C'+(r+14)+' 62 '+(r+12)+' 74 '+(r+11)+' 80',L,1.2,.45); fr=P(cap(14,26,33,46))+crown()+'<circle cx="'+(l-3)+'" cy="46" r="3" fill="#ec4899"/><circle cx="'+(r+3)+'" cy="46" r="3" fill="#ec4899"/>'; break;
+    case 19: bk=''; fr=P(cap(14,26,33,46))+crown()+[-1,1].map(function(sg){ var x=sg<0?l-3:r+3, o='<path d="M'+(x-4)+' 36L'+(x+4)+' 36L'+(x+3.4)+' 92L'+(x-3.4)+' 92Z" fill="'+D+'" opacity=".5"/>'; for(var k=0;k<9;k++){ var y=38+k*6.2, a=(k%2?-1:1); o+='<ellipse cx="'+(x+a*1.2)+'" cy="'+y+'" rx="4.4" ry="4.2" fill="'+(k%2?H:avMix(H,'#000000',.14))+'" transform="rotate('+(a*22)+' '+x+' '+y+')"/>'; } return o+'<rect x="'+(x-3.6)+'" y="92" width="7.2" height="3.4" rx="1.7" fill="#ec4899"/>'; }).join(''); break;
+    case 20: bk=P('M'+(r-14)+' 18C'+(r-6)+' -2 '+(r+16)+' 4 '+(r+14)+' 26C'+(r+13)+' 42 '+(r+5)+' 46 '+(r+4)+' 36C'+(r+8)+' 26 '+(r+4)+' 14 '+(r-8)+' 22Z')+T('M'+(r+6)+' 8C'+(r+14)+' 18 '+(r+10)+' 32 '+(r+6)+' 38',L,1.2,.4); fr=P(cap(14,26,33,46))+crown()+'<rect x="'+(r-12)+'" y="14" width="7" height="6" rx="2.4" fill="#ec4899" transform="rotate(-30 '+(r-8)+' 17)"/>'; break;
+    case 21: fr=P(cap(21,30,36,44),avMix(sk,H,.4))+P('M45 30C44 20 46 8 50 1C54 8 56 20 55 30C53 28 47 28 45 30Z')+T('M48 22L48 8M52 22L52 8',L,1.2,.5); break;
+    case 22: fr=P('M'+(l-3)+' 46C'+(l-6)+' 32 '+(l-1)+' 22 '+(l+8)+' 17C'+(l+6)+' 25 '+(l+6)+' 32 '+(l+8)+' 38C'+(l+4)+' 38 '+(l-1)+' 41 '+(l-3)+' 46Z')+P('M'+(r+3)+' 46C'+(r+6)+' 32 '+(r+1)+' 22 '+(r-8)+' 17C'+(r-6)+' 25 '+(r-6)+' 32 '+(r-8)+' 38C'+(r-4)+' 38 '+(r+1)+' 41 '+(r+3)+' 46Z')+T('M40 20C46 17 54 17 60 20',H,1.2,.6); break;
+    case 23: fr=P('M'+(l-2)+' 42C'+(l-4)+' 23 '+(l+6)+' 17 50 17C'+(r-6)+' 17 '+(r+4)+' 23 '+(r+2)+' 42C'+(r+1)+' 36 '+(r-2)+' 31 '+(r-6)+' 30C'+(r-12)+' 28 '+(l+12)+' 28 '+(l+6)+' 30C'+(l+2)+' 31 '+(l-1)+' 36 '+(l-2)+' 42Z')+P('M'+(l-2)+' 42C'+(l-3)+' 35 '+(l+1)+' 31 '+(l+6)+' 30C'+(l+4)+' 36 '+(l+4)+' 41 '+(l+5)+' 47C'+(l+2)+' 47 '+(l-1)+' 46 '+(l-2)+' 42Z M'+(r+2)+' 42C'+(r+3)+' 35 '+(r-1)+' 31 '+(r-6)+' 30C'+(r-4)+' 36 '+(r-4)+' 41 '+(r-5)+' 47C'+(r-2)+' 47 '+(r+1)+' 46 '+(r+2)+' 42Z',avMix(sk,H,.45))+crown(2); break;
   }
   return [bk,fr];
 }
@@ -145,7 +156,7 @@ function avSvg(cfg,vb){
   var c=avLimit(cfg), id='avc'+(avUid++), sk=AV.skin[c.s], skd=avMix(sk,'#000000',.2), H=AV.hairc[c.hc], oc=AV.outc[c.oc], ink='#2a1f1a', fd=AVF[c.f], w=fd[0], jw=fd[1], cy=fd[2], cw=fd[3], ch=fd[4];
   var L=50-w, R=50+w;
   var head='M'+L+' 44C'+L+' 29 '+(50-w*.55)+' 21 50 21C'+(50+w*.55)+' 21 '+R+' 29 '+R+' 44C'+R+' 56 '+(50+jw)+' '+(cy-2)+' '+(50+cw)+' '+cy+'Q50 '+(cy+ch)+' '+(50-cw)+' '+cy+'C'+(50-jw)+' '+(cy-2)+' '+L+' 56 '+L+' 44Z';
-  var hr=avHair(c.h,H,sk), of=avOutfit(c.o,sk,oc), eyeW='#fffdfa', iris=AV.eyec[c.ec];
+  var hr=avHair(c.h,H,w,sk), of=avOutfit(c.o,sk,oc), eyeW='#fffdfa', iris=AV.eyec[c.ec];
   var lip=avMix(sk,'#b8454a',.55), brow=avMix(H,'#000000',.15);
   var S=function(d,col,wd){return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+wd+'" stroke-linecap="round" stroke-linejoin="round"/>';};
   // yeux
@@ -153,7 +164,8 @@ function avSvg(cfg,vb){
     var s=x<50?-1:1, o='';
     switch(c.e){
       case 0: case 4: case 5:
-        o='<path d="M'+(x-5.5)+' 46Q'+x+' 41.5 '+(x+5.5)+' 46Q'+x+' 49.6 '+(x-5.5)+' 46Z" fill="'+eyeW+'"/><circle cx="'+x+'" cy="45.8" r="2.9" fill="'+iris+'"/><circle cx="'+x+'" cy="45.8" r="1.3" fill="#120c08"/><circle cx="'+(x+1)+'" cy="44.8" r=".8" fill="#fff"/>'+S('M'+(x-5.5)+' 46Q'+x+' 41.2 '+(x+5.5)+' 46',ink,1.3);
+        o='<path d="M'+(x-5.5)+' 46Q'+x+' 41.5 '+(x+5.5)+' 46Q'+x+' 49.6 '+(x-5.5)+' 46Z" fill="'+eyeW+'"/><circle cx="'+x+'" cy="45.8" r="2.9" fill="'+iris+'" stroke="'+avMix(iris,'#000000',.45)+'" stroke-width=".5"/><circle cx="'+x+'" cy="45.8" r="1.3" fill="#120c08"/><circle cx="'+(x+1)+'" cy="44.8" r=".8" fill="#fff"/>'+S('M'+(x-5.5)+' 46Q'+x+' 41.2 '+(x+5.5)+' 46',ink,1.3);
+        o+=S('M'+(x-5.9)+' 43.4Q'+x+' 38.8 '+(x+5.9)+' 43.4',skd,.9,.55);
         if(c.e===4) o+='<path d="M'+(x-5.7)+' 46Q'+x+' 41.4 '+(x+5.7)+' 46L'+(x+5.7)+' 44.6Q'+x+' 40 '+(x-5.7)+' 44.6Z" fill="'+avMix(sk,'#000000',.12)+'"/>'+S('M'+(x-5.5)+' 46Q'+x+' 43.6 '+(x+5.5)+' 46',ink,1.3);
         if(c.e===5) o+=S('M'+(x+s*5.4)+' 45.4L'+(x+s*7.6)+' 43.6M'+(x+s*4.6)+' 44.4L'+(x+s*6.4)+' 42',ink,1.1);
         break;
@@ -213,10 +225,10 @@ function avSvg(cfg,vb){
   var scarf=c.j===5?'<path d="M35 68Q50 84 65 68L68 80Q50 96 32 80Z" fill="'+oc+'"/><path d="M54 84L64 100L53 101L47 90Z" fill="'+avMix(oc,'#000000',.15)+'"/><path d="M38 74Q50 88 62 74" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="1.4"/>':'';
   var v=vb||'0 0 100 100';
   return '<svg viewBox="'+v+'" aria-hidden="true"><defs><clipPath id="'+id+'"><path d="'+head+'"/></clipPath></defs><rect x="-10" y="-10" width="120" height="120" fill="'+AV.bg[c.b]+'"/>'+hr[0]+
-    '<rect x="43" y="60" width="14" height="18" fill="'+sk+'"/><ellipse cx="50" cy="68" rx="9.5" ry="4.2" fill="#000" opacity=".13"/>'+of.base+of.neck+neck3+of.top+scarf+
+    '<rect x="43" y="60" width="14" height="18" fill="'+sk+'"/><path d="M43 60H57V72Q50 77 43 72Z" fill="#000" opacity=".12"/>'+of.base+of.neck+neck3+of.top+scarf+
     '<ellipse cx="'+(L-.6)+'" cy="49.5" rx="3.6" ry="5.2" fill="'+sk+'"/><ellipse cx="'+(R+.6)+'" cy="49.5" rx="3.6" ry="5.2" fill="'+sk+'"/><ellipse cx="'+(L-.2)+'" cy="50" rx="1.6" ry="3" fill="'+skd+'" opacity=".5"/><ellipse cx="'+(R+.2)+'" cy="50" rx="1.6" ry="3" fill="'+skd+'" opacity=".5"/>'+
     '<path d="'+head+'" fill="'+sk+'"/><path d="'+head+'" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="1"/>'+
-    '<ellipse cx="45" cy="30" rx="9" ry="4.5" fill="#fff" opacity=".13"/><ellipse cx="50" cy="'+(cy-1)+'" rx="'+(cw+7)+'" ry="3.4" fill="'+skd+'" opacity=".16"/>'+
+    '<g clip-path="url(#'+id+')"><path d="M70 18L100 18L100 90L46 90C64 76 72 62 70 40Z" fill="#000" opacity=".05"/><path d="M30 56Q50 74 70 56L70 80L30 80Z" fill="#000" opacity=".05"/></g><ellipse cx="45" cy="30" rx="9" ry="4.5" fill="#fff" opacity=".13"/><ellipse cx="50" cy="'+(cy-1)+'" rx="'+(cw+7)+'" ry="3.4" fill="'+skd+'" opacity=".16"/>'+
     '<circle cx="36" cy="55" r="4.4" fill="#ff8a8a" opacity=".12"/><circle cx="64" cy="55" r="4.4" fill="#ff8a8a" opacity=".12"/>'+
     ex+eyebrows+eye(41)+eye(59)+nz+bd+mouth+hr[1]+gl+jewel+hat+'</svg>';
 }
