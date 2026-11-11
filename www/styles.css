@@ -291,3 +291,9 @@ button.rrow .rname{flex:1;min-width:0}
 .avopt{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;font-size:.7rem;padding:2px;border-radius:14px;width:64px;color:inherit}
 .avopt .avatar{width:52px;height:52px;background:none;overflow:hidden;box-shadow:none}
 .avopt .avatar svg{width:100%;height:100%;display:block}
+
+/* Barre d'onglets : les libellés ne se chevauchent plus (5 onglets adultes) */
+.tab span:not(.badge){max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs.n5 .tab{font-size:10px;letter-spacing:-.03em}
+.tabs.n5 .tab svg{width:22px;height:22px}
+@media (max-width:380px){.tabs.n5 .tab{font-size:9px}}

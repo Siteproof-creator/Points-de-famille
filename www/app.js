@@ -257,7 +257,7 @@ function tabsFor(m){
 }
 function tabbar(m){
   var pc=pendingCount();
-  return '<nav class="tabbar" aria-label="Navigation"><div class="tabs">'+tabsFor(m).map(function(t){
+  return '<nav class="tabbar" aria-label="Navigation"><div class="tabs n'+tabsFor(m).length+'">'+tabsFor(m).map(function(t){
     return '<button class="tab" data-act="tab" data-tab="'+t[0]+'"'+(tab===t[0]?' aria-current="page"':'')+'>'+t[2]+'<span>'+t[1]+'</span>'+(t[0]==='approve'&&pc?'<span class="badge">'+pc+'</span>':'')+'</button>';
   }).join('')+'</div></nav>';
 }
