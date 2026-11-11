@@ -297,3 +297,9 @@ button.rrow .rname{flex:1;min-width:0}
 .tabs.n5 .tab{font-size:10px;letter-spacing:-.03em}
 .tabs.n5 .tab svg{width:22px;height:22px}
 @media (max-width:380px){.tabs.n5 .tab{font-size:9px}}
+
+/* Renfort : 5 onglets adultes, écriture encore plus petite */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.tabs.n5{gap:0}
+.tabs.n5 .tab{font-size:9.5px;letter-spacing:-.05em;padding-inline:0}
+@media (max-width:420px){.tabs.n5 .tab{font-size:8.5px}}
