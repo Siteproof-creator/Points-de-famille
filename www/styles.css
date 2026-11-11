@@ -341,3 +341,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .evp{display:inline-flex;align-items:center;gap:5px;font-size:.82rem}
 .evp .avatar{width:22px;height:22px;font-size:.7rem}
 .evmine{font-size:.7rem;font-weight:700;color:var(--accent);align-self:center}
+
+.pushrow{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.pushrow h3{margin:0 0 2px}.pushrow p{margin:0}
+.sw{flex-shrink:0;width:52px;height:32px;border-radius:16px;border:0;padding:3px;background:rgba(120,120,128,.32);cursor:pointer;transition:background .2s;display:block}
+.sw i{display:block;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .2s}
+.sw.on{background:#34c759}.sw.on i{transform:translateX(20px)}

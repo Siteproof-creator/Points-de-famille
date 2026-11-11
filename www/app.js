@@ -85,9 +85,9 @@ function avMix(a,b,t){
 }
 var avUid=0;
 var AVF=[[20,16,68,8,6],[22,20,66,12,6],[18,14,72,7,5],[21,20,67,13,3]];
-function avHair(i,H,w,sk){
-  var D=avMix(H,'#000000',.32), L=avMix(H,'#ffffff',.34), l=50-w, r=50+w, bk='', fr='';
-  var P=function(d,c,o){return '<path d="'+d+'" fill="'+(c||H)+'"'+(o?' opacity="'+o+'"':'')+'/>';};
+function avHair(i,H,w,sk,HF){
+  HF=HF||H; var D=avMix(H,'#000000',.32), L=avMix(H,'#ffffff',.34), l=50-w, r=50+w, bk='', fr='';
+  var P=function(d,c,o){return '<path d="'+d+'" fill="'+(c||HF)+'"'+(o?' opacity="'+o+'"':'')+'/>';};
   var T=function(d,c,wd,o){return '<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+(wd||1.1)+'" stroke-opacity="'+(o||.5)+'" stroke-linecap="round"/>';};
   var crown=function(y){y=y||0; return T('M'+(l+6)+' '+(21+y)+'C'+(l+14)+' '+(14+y)+' '+(r-14)+' '+(14+y)+' '+(r-6)+' '+(21+y),L,1.8,.55)+T('M'+(l+10)+' '+(26+y)+'C'+(l+18)+' '+(19+y)+' '+(r-18)+' '+(19+y)+' '+(r-10)+' '+(26+y),L,1,.35);};
   var cap=function(top,hlC,hlS,sideY){
@@ -113,11 +113,11 @@ function avHair(i,H,w,sk){
     case 9: bk=P(back(98,3)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-1)+' 35 '+(r-8)+' 30 50 30C'+(l+8)+' 30 '+(l+1)+' 35 '+(l-3)+' 46Z')+lock(-1,98,3)+lock(1,98,3)+crown()+T('M'+(l-4)+' 60C'+(l-6)+' 74 '+(l-5)+' 86 '+(l-6)+' 96M'+(r+4)+' 60C'+(r+6)+' 74 '+(r+5)+' 86 '+(r+6)+' 96',L,1.4,.45); break;
     case 10: bk=P(back(96,4)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-1)+' 35 '+(r-8)+' 30 50 30C'+(l+8)+' 30 '+(l+1)+' 35 '+(l-3)+' 46Z')+lock(-1,96,4,true)+lock(1,96,4,true)+crown()+T('M'+(l-4)+' 60C'+(l-8)+' 68 '+(l-1)+' 74 '+(l-5)+' 84',L,1.4,.45)+T('M'+(r+4)+' 60C'+(r+8)+' 68 '+(r+1)+' 74 '+(r+5)+' 84',L,1.4,.45); break;
     case 11: bk=P(back(78,1)); fr=P('M'+(l-3)+' 46C'+(l-4)+' 24 '+(l+6)+' 14 50 14C'+(r-6)+' 14 '+(r+4)+' 24 '+(r+3)+' 46C'+(r-2)+' 36 '+(r-8)+' 30 50 30C'+(l+8)+' 30 '+(l+2)+' 36 '+(l-3)+' 46Z')+lock(-1,78,1)+lock(1,78,1)+crown(); break;
-    case 12: bk='<ellipse cx="50" cy="35" rx="'+(w+12)+'" ry="27" fill="'+H+'"/><circle cx="'+(l-7)+'" cy="48" r="8" fill="'+H+'"/><circle cx="'+(r+7)+'" cy="48" r="8" fill="'+H+'"/>'; fr=P(cap(11,27,33,45))+'<g fill="none" stroke="'+D+'" stroke-opacity=".4" stroke-width="1.2" stroke-linecap="round"><path d="M30 24q3-4 6 0M42 15q3-4 6 0M56 14q3-4 6 0M68 22q3-4 6 0M26 36q3-4 6 0M70 36q3-4 6 0M44 24q3-4 6 0"/></g>'+crown(-4); break;
-    case 13: fr=P(cap(14,26,33,46))+'<g fill="'+H+'"><circle cx="'+(l+1)+'" cy="30" r="6.5"/><circle cx="'+(l+9)+'" cy="21" r="7"/><circle cx="37" cy="15" r="7"/><circle cx="50" cy="12" r="7.4"/><circle cx="63" cy="15" r="7"/><circle cx="'+(r-9)+'" cy="21" r="7"/><circle cx="'+(r-1)+'" cy="30" r="6.5"/><circle cx="'+(l-2)+'" cy="42" r="5"/><circle cx="'+(r+2)+'" cy="42" r="5"/></g><g fill="none" stroke="'+L+'" stroke-opacity=".5" stroke-width="1.1" stroke-linecap="round"><path d="M32 18q3-3 6 0M46 10q3-3 7 0M60 14q3-3 6 0M26 30q2-3 5-1M69 30q2-3 5-1"/></g>'; break;
-    case 14: var lk=[[l+1,84,36],[l-4,92,40],[l-8.6,78,46],[r-1,84,36],[r+4,92,40],[r+8.6,78,46]].map(function(q){var x=q[0],y0=q[2],y1=q[1]; return '<path d="M'+(x-3.4)+' '+(y0+3)+'Q'+(x-3.4)+' '+y0+' '+x+' '+y0+'Q'+(x+3.4)+' '+y0+' '+(x+3.4)+' '+(y0+3)+'L'+(x+3.2)+' '+(y1-3)+'Q'+x+' '+(y1+3)+' '+(x-3.2)+' '+(y1-3)+'Z" fill="'+H+'"/><path d="M'+x+' '+(y0+10)+'L'+x+' '+(y1-4)+'" stroke="'+D+'" stroke-opacity=".4" stroke-width="1"/>';}).join(''); bk=P(cap(13,25,32,48)); fr=P(cap(14,25,32,46))+lk+crown(); break;
-    case 15: bk='<circle cx="50" cy="11" r="8.5" fill="'+H+'"/>'; fr=P(cap(14,26,33,46))+crown()+T('M43 9C47 14 53 14 57 9',D,1.2,.45)+'<rect x="43" y="15" width="14" height="3" rx="1.5" fill="'+avMix(H,'#000000',.45)+'" opacity=".9"/>'; break;
-    case 16: bk='<circle cx="'+(r-4)+'" cy="12" r="8.5" fill="'+H+'"/>'; fr=P(cap(14,26,33,46))+crown()+T('M'+(r-10)+' 11C'+(r-6)+' 16 '+(r-2)+' 16 '+(r+1)+' 11',D,1.2,.45)+'<circle cx="'+(r-12)+'" cy="18" r="2.2" fill="#ec4899"/>'; break;
+    case 12: bk='<ellipse cx="50" cy="35" rx="'+(w+12)+'" ry="27" fill="'+HF+'"/><circle cx="'+(l-7)+'" cy="48" r="8" fill="'+HF+'"/><circle cx="'+(r+7)+'" cy="48" r="8" fill="'+HF+'"/>'; fr=P(cap(11,27,33,45))+'<g fill="none" stroke="'+D+'" stroke-opacity=".4" stroke-width="1.2" stroke-linecap="round"><path d="M30 24q3-4 6 0M42 15q3-4 6 0M56 14q3-4 6 0M68 22q3-4 6 0M26 36q3-4 6 0M70 36q3-4 6 0M44 24q3-4 6 0"/></g>'+crown(-4); break;
+    case 13: fr=P(cap(14,26,33,46))+'<g fill="'+HF+'"><circle cx="'+(l+1)+'" cy="30" r="6.5"/><circle cx="'+(l+9)+'" cy="21" r="7"/><circle cx="37" cy="15" r="7"/><circle cx="50" cy="12" r="7.4"/><circle cx="63" cy="15" r="7"/><circle cx="'+(r-9)+'" cy="21" r="7"/><circle cx="'+(r-1)+'" cy="30" r="6.5"/><circle cx="'+(l-2)+'" cy="42" r="5"/><circle cx="'+(r+2)+'" cy="42" r="5"/></g><g fill="none" stroke="'+L+'" stroke-opacity=".5" stroke-width="1.1" stroke-linecap="round"><path d="M32 18q3-3 6 0M46 10q3-3 7 0M60 14q3-3 6 0M26 30q2-3 5-1M69 30q2-3 5-1"/></g>'; break;
+    case 14: var lk=[[l+1,84,36],[l-4,92,40],[l-8.6,78,46],[r-1,84,36],[r+4,92,40],[r+8.6,78,46]].map(function(q){var x=q[0],y0=q[2],y1=q[1]; return '<path d="M'+(x-3.4)+' '+(y0+3)+'Q'+(x-3.4)+' '+y0+' '+x+' '+y0+'Q'+(x+3.4)+' '+y0+' '+(x+3.4)+' '+(y0+3)+'L'+(x+3.2)+' '+(y1-3)+'Q'+x+' '+(y1+3)+' '+(x-3.2)+' '+(y1-3)+'Z" fill="'+HF+'"/><path d="M'+x+' '+(y0+10)+'L'+x+' '+(y1-4)+'" stroke="'+D+'" stroke-opacity=".4" stroke-width="1"/>';}).join(''); bk=P(cap(13,25,32,48)); fr=P(cap(14,25,32,46))+lk+crown(); break;
+    case 15: bk='<circle cx="50" cy="11" r="8.5" fill="'+HF+'"/>'; fr=P(cap(14,26,33,46))+crown()+T('M43 9C47 14 53 14 57 9',D,1.2,.45)+'<rect x="43" y="15" width="14" height="3" rx="1.5" fill="'+avMix(H,'#000000',.45)+'" opacity=".9"/>'; break;
+    case 16: bk='<circle cx="'+(r-4)+'" cy="12" r="8.5" fill="'+HF+'"/>'; fr=P(cap(14,26,33,46))+crown()+T('M'+(r-10)+' 11C'+(r-6)+' 16 '+(r-2)+' 16 '+(r+1)+' 11',D,1.2,.45)+'<circle cx="'+(r-12)+'" cy="18" r="2.2" fill="#ec4899"/>'; break;
     case 17: bk=P('M'+(r-3)+' 30C'+(r+14)+' 28 '+(r+24)+' 52 '+(r+14)+' 76C'+(r+10)+' 84 '+(r+4)+' 80 '+(r+6)+' 70C'+(r+9)+' 58 '+(r+3)+' 48 '+(r-3)+' 46Z')+T('M'+(r+8)+' 40C'+(r+16)+' 56 '+(r+10)+' 68 '+(r+9)+' 78',L,1.2,.4); fr=P(cap(14,26,33,46))+crown()+'<rect x="'+(r+1)+'" y="35" width="6" height="8" rx="2.4" fill="#ec4899" transform="rotate(-18 '+(r+4)+' 39)"/>'; break;
     case 18: bk=P('M'+(l-1)+' 40C'+(l-18)+' 40 '+(l-22)+' 68 '+(l-14)+' 82C'+(l-8)+' 88 '+(l-2)+' 78 '+(l-1)+' 70Z')+P('M'+(r+1)+' 40C'+(r+18)+' 40 '+(r+22)+' 68 '+(r+14)+' 82C'+(r+8)+' 88 '+(r+2)+' 78 '+(r+1)+' 70Z')+T('M'+(l-8)+' 50C'+(l-14)+' 62 '+(l-12)+' 74 '+(l-11)+' 80M'+(r+8)+' 50C'+(r+14)+' 62 '+(r+12)+' 74 '+(r+11)+' 80',L,1.2,.45); fr=P(cap(14,26,33,46))+crown()+'<circle cx="'+(l-3)+'" cy="46" r="3" fill="#ec4899"/><circle cx="'+(r+3)+'" cy="46" r="3" fill="#ec4899"/>'; break;
     case 19: bk=''; fr=P(cap(14,26,33,46))+crown()+[-1,1].map(function(sg){ var x=sg<0?l-3:r+3, o='<path d="M'+(x-4)+' 36L'+(x+4)+' 36L'+(x+3.4)+' 92L'+(x-3.4)+' 92Z" fill="'+D+'" opacity=".5"/>'; for(var k=0;k<9;k++){ var y=38+k*6.2, a=(k%2?-1:1); o+='<ellipse cx="'+(x+a*1.2)+'" cy="'+y+'" rx="4.4" ry="4.2" fill="'+(k%2?H:avMix(H,'#000000',.14))+'" transform="rotate('+(a*22)+' '+x+' '+y+')"/>'; } return o+'<rect x="'+(x-3.6)+'" y="92" width="7.2" height="3.4" rx="1.7" fill="#ec4899"/>'; }).join(''); break;
@@ -156,18 +156,21 @@ function avSvg(cfg,vb){
   var c=avLimit(cfg), id='avc'+(avUid++), sk=AV.skin[c.s], skd=avMix(sk,'#000000',.2), H=AV.hairc[c.hc], oc=AV.outc[c.oc], ink='#2a1f1a', fd=AVF[c.f], w=fd[0], jw=fd[1], cy=fd[2], cw=fd[3], ch=fd[4];
   var L=50-w, R=50+w;
   var head='M'+L+' 44C'+L+' 29 '+(50-w*.55)+' 21 50 21C'+(50+w*.55)+' 21 '+R+' 29 '+R+' 44C'+R+' 56 '+(50+jw)+' '+(cy-2)+' '+(50+cw)+' '+cy+'Q50 '+(cy+ch)+' '+(50-cw)+' '+cy+'C'+(50-jw)+' '+(cy-2)+' '+L+' 56 '+L+' 44Z';
-  var hr=avHair(c.h,H,w,sk), of=avOutfit(c.o,sk,oc), eyeW='#fffdfa', iris=AV.eyec[c.ec];
+  var hr=avHair(c.h,H,w,sk,'url(#'+id+'h)'), of=avOutfit(c.o,sk,oc), eyeW='#fffdfa', iris=AV.eyec[c.ec];
   var lip=avMix(sk,'#b8454a',.55), brow=avMix(H,'#000000',.15);
-  var S=function(d,col,wd){return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+wd+'" stroke-linecap="round" stroke-linejoin="round"/>';};
+  var S=function(d,col,wd,o){return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+wd+'"'+(o?' stroke-opacity="'+o+'"':'')+' stroke-linecap="round" stroke-linejoin="round"/>';};
   // yeux
   var eye=function(x){
     var s=x<50?-1:1, o='';
     switch(c.e){
       case 0: case 4: case 5:
-        o='<path d="M'+(x-5.5)+' 46Q'+x+' 41.5 '+(x+5.5)+' 46Q'+x+' 49.6 '+(x-5.5)+' 46Z" fill="'+eyeW+'"/><circle cx="'+x+'" cy="45.8" r="2.9" fill="'+iris+'" stroke="'+avMix(iris,'#000000',.45)+'" stroke-width=".5"/><circle cx="'+x+'" cy="45.8" r="1.3" fill="#120c08"/><circle cx="'+(x+1)+'" cy="44.8" r=".8" fill="#fff"/>'+S('M'+(x-5.5)+' 46Q'+x+' 41.2 '+(x+5.5)+' 46',ink,1.3);
-        o+=S('M'+(x-5.9)+' 43.4Q'+x+' 38.8 '+(x+5.9)+' 43.4',skd,.9,.55);
-        if(c.e===4) o+='<path d="M'+(x-5.7)+' 46Q'+x+' 41.4 '+(x+5.7)+' 46L'+(x+5.7)+' 44.6Q'+x+' 40 '+(x-5.7)+' 44.6Z" fill="'+avMix(sk,'#000000',.12)+'"/>'+S('M'+(x-5.5)+' 46Q'+x+' 43.6 '+(x+5.5)+' 46',ink,1.3);
-        if(c.e===5) o+=S('M'+(x+s*5.4)+' 45.4L'+(x+s*7.6)+' 43.6M'+(x+s*4.6)+' 44.4L'+(x+s*6.4)+' 42',ink,1.1);
+        var ep='M'+(x-6.2)+' 46.2Q'+x+' 40.6 '+(x+6.2)+' 46.2Q'+x+' 50.6 '+(x-6.2)+' 46.2Z', ci=id+'e'+x;
+        o='<clipPath id="'+ci+'"><path d="'+ep+'"/></clipPath><path d="'+ep+'" fill="'+eyeW+'"/><g clip-path="url(#'+ci+')"><circle cx="'+x+'" cy="45.9" r="3.6" fill="url(#'+id+'i)"/><circle cx="'+x+'" cy="45.9" r="3.6" fill="none" stroke="'+avMix(iris,'#000000',.55)+'" stroke-width=".7"/><circle cx="'+x+'" cy="45.9" r="1.55" fill="#0d0805"/><ellipse cx="'+(x+1.3)+'" cy="44.5" rx="1" ry=".9" fill="#fff"/><circle cx="'+(x-1.2)+'" cy="47.6" r=".5" fill="#fff" opacity=".6"/><path d="M'+(x-7)+' 40Q'+x+' 38 '+(x+7)+' 40L'+(x+7)+' 44.6Q'+x+' 41.8 '+(x-7)+' 44.6Z" fill="#000" opacity=".16"/></g>'+
+          '<circle cx="'+(x-s*5.4)+'" cy="46.4" r="1" fill="#e9948f" opacity=".7"/>'+
+          S('M'+(x-6.3)+' 46.2Q'+x+' 40.4 '+(x+6.3)+' 46.2',ink,1.35)+S('M'+(x+s*5.9)+' 45.4Q'+(x+s*7.4)+' 45 '+(x+s*8)+' 43.6',ink,1)+S('M'+(x-5.6)+' 47Q'+x+' 50.2 '+(x+5.6)+' 47',skd,.7,.6)+
+          S('M'+(x-6.6)+' 43.2Q'+x+' 37.8 '+(x+6.6)+' 43.2',skd,.7,.3);
+        if(c.e===4) o+='<path d="M'+(x-6.4)+' 46.2Q'+x+' 40.4 '+(x+6.4)+' 46.2L'+(x+6.4)+' 44.4Q'+x+' 38.6 '+(x-6.4)+' 44.4Z" fill="'+sk+'"/>'+S('M'+(x-6.2)+' 46.2Q'+x+' 43.4 '+(x+6.2)+' 46.2',ink,1.7);
+        if(c.e===5) o+=S('M'+(x+s*5.6)+' 44.6L'+(x+s*8.4)+' 42.6M'+(x+s*4.4)+' 43.2L'+(x+s*6.6)+' 40.4M'+(x+s*2.4)+' 42.2L'+(x+s*3.6)+' 39.4',ink,1.1);
         break;
       case 1: o='<circle cx="'+x+'" cy="46" r="4.3" fill="'+eyeW+'"/><circle cx="'+x+'" cy="46.2" r="2.8" fill="'+iris+'"/><circle cx="'+x+'" cy="46.2" r="1.3" fill="#120c08"/><circle cx="'+(x+1)+'" cy="45.2" r=".8" fill="#fff"/>'+S('M'+(x-4.3)+' 45Q'+x+' 41 '+(x+4.3)+' 45',ink,1.2); break;
       case 2: o='<circle cx="'+x+'" cy="46" r="5.2" fill="'+eyeW+'"/><circle cx="'+x+'" cy="46.4" r="3.5" fill="'+iris+'"/><circle cx="'+x+'" cy="46.4" r="1.7" fill="#120c08"/><circle cx="'+(x+1.3)+'" cy="45" r="1.1" fill="#fff"/>'+S('M'+(x-5.2)+' 45Q'+x+' 40 '+(x+5.2)+' 45',ink,1.3); break;
@@ -177,19 +180,19 @@ function avSvg(cfg,vb){
   };
   var bz=['M36 39.5Q41 37 46.5 38.5|M53.5 38.5Q59 37 64 39.5','M36 39Q41 36 46.5 38|M53.5 38Q59 36 64 39','M36 38.5L46.5 38|M53.5 38L64 38.5','M36 40.5Q41 34.5 46.5 38.5|M53.5 38.5Q59 34.5 64 40.5','M36 36L46.5 39.5|M53.5 39.5L64 36'][c.eb].split('|');
   var bw=c.eb===1?3:(c.eb===0?1.5:2.2);
-  var eyebrows=S(bz[0],brow,bw)+S(bz[1],brow,bw);
+  var eyebrows=S(bz[0],brow,bw*2.1,.3)+S(bz[1],brow,bw*2.1,.3)+S(bz[0],brow,bw*1.1,.95)+S(bz[1],brow,bw*1.1,.95);
   var nz=['<path d="M48 49Q47 54 47.6 55.4" fill="none" stroke="'+skd+'" stroke-width="1" opacity=".6" stroke-linecap="round"/>'+S('M47.4 56Q50 58 52.6 56',avMix(sk,'#000000',.36),1.3),
     '<ellipse cx="50" cy="55" rx="3.6" ry="3" fill="'+avMix(sk,'#ffffff',.1)+'" stroke="'+avMix(sk,'#000000',.2)+'" stroke-width="1"/>'+S('M47 57Q50 59 53 57',avMix(sk,'#000000',.36),1.2),
     S('M50 47L48.6 55.6Q50 57.6 51.4 55.6',avMix(sk,'#000000',.4),1.2),
-    S('M48 50Q46 55 45.4 56.4Q50 59.4 54.6 56.4Q54 55 52 50',avMix(sk,'#000000',.32),1.2)][c.n];
-  var my=60.5, mouth=[
-    S('M43.5 '+my+'Q50 '+(my+5.5)+' 56.5 '+my,avMix(lip,'#000000',.2),1.8)+'<path d="M46 '+(my+3.2)+'Q50 '+(my+4.8)+' 54 '+(my+3.2)+'Q50 '+(my+6.6)+' 46 '+(my+3.2)+'Z" fill="'+lip+'" opacity=".55"/>',
+    S('M48 50Q46 55 45.4 56.4Q50 59.4 54.6 56.4Q54 55 52 50',avMix(sk,'#000000',.32),1.2)][c.n]+'<path d="M45.6 49.5Q44.6 54 46.6 57" fill="none" stroke="'+skd+'" stroke-width="1.3" stroke-opacity=".16" stroke-linecap="round"/><ellipse cx="48.2" cy="57" rx="1" ry=".55" fill="'+avMix(sk,'#000000',.55)+'" opacity=".45"/><ellipse cx="51.8" cy="57" rx="1" ry=".55" fill="'+avMix(sk,'#000000',.55)+'" opacity=".45"/><ellipse cx="50" cy="54" rx="1.5" ry="2.4" fill="#fff" opacity=".16"/><ellipse cx="50" cy="58.6" rx="4.2" ry="1.1" fill="#000" opacity=".08"/>';
+  var my=60.5, lips=function(lf,fu,lc){ var y=my, dl=avMix(lc,'#000000',.2); return '<path d="M43.4 '+(y-lf*.8)+'Q46.8 '+(y-2.5)+' 50 '+(y-.8)+'Q53.2 '+(y-2.5)+' 56.6 '+(y-lf*.8)+'Q50 '+(y+1.5)+' 43.4 '+(y-lf*.8)+'Z" fill="'+avMix(lc,'#000000',.1)+'"/><path d="M44.2 '+(y+.3)+'Q50 '+(y+1.4)+' 55.8 '+(y+.3)+'Q55 '+(y+3.3+fu*.5)+' 50 '+(y+3.7+fu*.5)+'Q45 '+(y+3.3+fu*.5)+' 44.2 '+(y+.3)+'Z" fill="'+lc+'"/><ellipse cx="50" cy="'+(y+2.6)+'" rx="1.8" ry=".6" fill="#fff" opacity=".35"/>'+S('M42.8 '+(y-lf)+'Q50 '+(y+1.6+lf*.7)+' 57.2 '+(y-lf),dl,1.1)+S('M49 '+(y-3.4)+'L49.2 '+(y-2)+'M51 '+(y-3.4)+'L50.8 '+(y-2),skd,.6,.4); }, mouth=[
+    lips(1.3,.6,lip),
     '<path d="M42 '+(my-1)+'Q50 '+(my+.4)+' 58 '+(my-1)+'Q56 '+(my+7)+' 50 '+(my+7)+'Q44 '+(my+7)+' 42 '+(my-1)+'Z" fill="#5b1f1f"/><path d="M43.4 '+(my-.4)+'Q50 '+(my+.8)+' 56.6 '+(my-.4)+'L56 '+(my+2.4)+'Q50 '+(my+3.4)+' 44 '+(my+2.4)+'Z" fill="#fff"/>',
-    '<path d="M45 '+(my+1)+'L55 '+(my+1)+'" stroke="'+avMix(lip,'#000000',.2)+'" stroke-width="1.8" stroke-linecap="round"/><path d="M46.5 '+(my+2.2)+'Q50 '+(my+3.8)+' 53.5 '+(my+2.2)+'" fill="none" stroke="'+lip+'" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>',
+    lips(0,.1,lip),
     S('M44 '+(my+1.2)+'Q51 '+(my+3.4)+' 57.4 '+(my-1.2),avMix(lip,'#000000',.2),1.8),
     '<path d="M42 '+(my-1)+'Q50 '+(my+.4)+' 58 '+(my-1)+'Q56 '+(my+7)+' 50 '+(my+7)+'Q44 '+(my+7)+' 42 '+(my-1)+'Z" fill="#5b1f1f"/><path d="M45 '+(my+4.6)+'Q50 '+(my+2.4)+' 55 '+(my+4.6)+'Q54 '+(my+8)+' 50 '+(my+8)+'Q46 '+(my+8)+' 45 '+(my+4.6)+'Z" fill="#e46f78"/>',
     '<ellipse cx="50" cy="'+(my+2.6)+'" rx="3" ry="4" fill="#5b1f1f"/>',
-    '<path d="M43 '+(my+.4)+'Q46.5 '+(my-1.8)+' 50 '+(my-.6)+'Q53.5 '+(my-1.8)+' 57 '+(my+.4)+'Q50 '+(my+6.4)+' 43 '+(my+.4)+'Z" fill="#c0393f"/>'][c.m];
+    lips(.7,1,'#c0393f')][c.m];
   // barbe
   var bd='', bdc=H, bdd=avMix(H,'#000000',.2);
   var bclip=function(inner){ return '<g clip-path="url(#'+id+')">'+inner+'</g>'; };
@@ -224,13 +227,19 @@ function avSvg(cfg,vb){
   var neck3=c.j===3?'<path d="M39 75Q50 87 61 75" fill="none" stroke="#fbbf24" stroke-width="1.3"/><circle cx="50" cy="83.5" r="2.2" fill="#fbbf24"/>':'';
   var scarf=c.j===5?'<path d="M35 68Q50 84 65 68L68 80Q50 96 32 80Z" fill="'+oc+'"/><path d="M54 84L64 100L53 101L47 90Z" fill="'+avMix(oc,'#000000',.15)+'"/><path d="M38 74Q50 88 62 74" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="1.4"/>':'';
   var v=vb||'0 0 100 100';
-  return '<svg viewBox="'+v+'" aria-hidden="true"><defs><clipPath id="'+id+'"><path d="'+head+'"/></clipPath></defs><rect x="-10" y="-10" width="120" height="120" fill="'+AV.bg[c.b]+'"/>'+hr[0]+
+  var sl=avMix(sk,'#ffffff',.2), sd=avMix(sk,'#7a2a10',.22), hl=avMix(H,'#ffffff',.3), hd=avMix(H,'#000000',.38);
+  var defs='<radialGradient id="'+id+'s" cx=".4" cy=".36" r=".75"><stop offset="0" stop-color="'+sl+'"/><stop offset=".55" stop-color="'+sk+'"/><stop offset="1" stop-color="'+sd+'"/></radialGradient>'+
+    '<linearGradient id="'+id+'h" gradientUnits="userSpaceOnUse" x1="25" y1="5" x2="78" y2="95"><stop offset="0" stop-color="'+hl+'"/><stop offset=".35" stop-color="'+H+'"/><stop offset="1" stop-color="'+hd+'"/></linearGradient>'+
+    '<radialGradient id="'+id+'i" cx=".5" cy=".42" r=".6"><stop offset="0" stop-color="'+avMix(iris,'#ffffff',.35)+'"/><stop offset=".5" stop-color="'+iris+'"/><stop offset="1" stop-color="'+avMix(iris,'#000000',.55)+'"/></radialGradient>'+
+    '<pattern id="'+id+'p" width="9" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(3)"><rect width="9" height="60" fill="none"/><rect x="0.6" width="0.9" height="60" fill="'+hd+'" opacity=".5"/><rect x="2.4" width="0.5" height="60" fill="'+hl+'" opacity=".4"/><rect x="3.9" width="1.1" height="60" fill="'+hd+'" opacity=".4"/><rect x="5.7" width="0.6" height="60" fill="'+hl+'" opacity=".45"/><rect x="7.3" width="0.8" height="60" fill="'+hd+'" opacity=".35"/></pattern>'+
+    '<filter id="'+id+'b" x="-10" y="-10" width="120" height="130" filterUnits="userSpaceOnUse"><feColorMatrix type="matrix" values="0 0 0 0 .1  0 0 0 0 .04  0 0 0 0 0  0 0 0 1 0"/><feGaussianBlur stdDeviation="1.3"/></filter>';
+  return '<svg viewBox="'+v+'" aria-hidden="true"><defs><clipPath id="'+id+'"><path d="'+head+'"/></clipPath>'+defs+'</defs><rect x="-10" y="-10" width="120" height="120" fill="'+AV.bg[c.b]+'"/>'+hr[0]+(hr[0]?hr[0].split('url(#'+id+'h)').join('url(#'+id+'p)'):'')+
     '<rect x="43" y="60" width="14" height="18" fill="'+sk+'"/><path d="M43 60H57V72Q50 77 43 72Z" fill="#000" opacity=".12"/>'+of.base+of.neck+neck3+of.top+scarf+
     '<ellipse cx="'+(L-.6)+'" cy="49.5" rx="3.6" ry="5.2" fill="'+sk+'"/><ellipse cx="'+(R+.6)+'" cy="49.5" rx="3.6" ry="5.2" fill="'+sk+'"/><ellipse cx="'+(L-.2)+'" cy="50" rx="1.6" ry="3" fill="'+skd+'" opacity=".5"/><ellipse cx="'+(R+.2)+'" cy="50" rx="1.6" ry="3" fill="'+skd+'" opacity=".5"/>'+
-    '<path d="'+head+'" fill="'+sk+'"/><path d="'+head+'" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="1"/>'+
-    '<g clip-path="url(#'+id+')"><path d="M70 18L100 18L100 90L46 90C64 76 72 62 70 40Z" fill="#000" opacity=".05"/><path d="M30 56Q50 74 70 56L70 80L30 80Z" fill="#000" opacity=".05"/></g><ellipse cx="45" cy="30" rx="9" ry="4.5" fill="#fff" opacity=".13"/><ellipse cx="50" cy="'+(cy-1)+'" rx="'+(cw+7)+'" ry="3.4" fill="'+skd+'" opacity=".16"/>'+
-    '<circle cx="36" cy="55" r="4.4" fill="#ff8a8a" opacity=".12"/><circle cx="64" cy="55" r="4.4" fill="#ff8a8a" opacity=".12"/>'+
-    ex+eyebrows+eye(41)+eye(59)+nz+bd+mouth+hr[1]+gl+jewel+hat+'</svg>';
+    '<path d="M'+(L+.4)+' 47Q'+(L-2.6)+' 50 '+(L+.4)+' 54M'+(R-.4)+' 47Q'+(R+2.6)+' 50 '+(R-.4)+' 54" fill="none" stroke="'+skd+'" stroke-width=".8" opacity=".5"/>'+'<path d="'+head+'" fill="url(#'+id+'s)"/><path d="'+head+'" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="1"/>'+
+    '<g clip-path="url(#'+id+')"><path d="M70 18L100 18L100 90L46 90C64 76 72 62 70 40Z" fill="#000" opacity=".05"/><path d="M30 56Q50 74 70 56L70 80L30 80Z" fill="#000" opacity=".05"/><ellipse cx="50" cy="'+(cy-1)+'" rx="'+(cw+7)+'" ry="3.4" fill="'+skd+'" opacity=".18"/></g><ellipse cx="45" cy="30" rx="9" ry="4.5" fill="#fff" opacity=".13"/>'+
+    '<ellipse cx="41" cy="51.6" rx="5.6" ry="1.5" fill="'+skd+'" opacity=".14"/><ellipse cx="59" cy="51.6" rx="5.6" ry="1.5" fill="'+skd+'" opacity=".14"/><ellipse cx="34" cy="52" rx="4" ry="3" fill="#fff" opacity=".1"/><circle cx="36" cy="55" r="4.4" fill="#ff8a8a" opacity=".12"/><circle cx="64" cy="55" r="4.4" fill="#ff8a8a" opacity=".12"/>'+
+    ex+eyebrows+eye(41)+eye(59)+nz+bd+mouth+(hr[1]?'<g clip-path="url(#'+id+')" opacity=".3"><g filter="url(#'+id+'b)" transform="translate(0 2.4)">'+hr[1]+'</g></g>'+hr[1]+hr[1].split('url(#'+id+'h)').join('url(#'+id+'p)'):'')+gl+jewel+hat+'</svg>';
 }
 function avatar(m,cls){
   var v=m.avatar||'', cfg=avParse(v);
@@ -345,7 +354,6 @@ var ICON={
 function banners(){
   var h='';
   if(offline) h+='<p class="note">Pas de connexion : les données affichées peuvent ne pas être à jour.</p>';
-  h+=pushBanner();
   return h;
 }
 function loadingHtml(){
@@ -729,7 +737,7 @@ function render(){
   else if(tab==='family') body=familyView();
   else if(tab==='me') body=meView(m);
   else if(tab==='cal') body=calView(m);
-  if(tab==='home') body+=pushCard();
+  if(tab==='family'||tab==='me') body+=pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
   if(sheet&&(sheet.type==='member'||sheet.type==='pot')) renderSheet();
@@ -1493,13 +1501,12 @@ function pushBanner(){
   return '<p class="note">Pour recevoir des notifications sur iPhone, ajoute d’abord l’application à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil »), puis ouvre-la depuis son icône. <button class="link" data-act="pushLater">Masquer</button></p>';
 }
 function pushCard(){
-  if(!pushState||pushBannerShown()) return '';
-  var h='<section class="card"><h3>Notifications</h3>';
-  if(pushState==='on') h+='<p class="muted small" style="margin:4px 0 10px">Activées sur cet appareil.</p><button class="btn small" data-act="pushOff">Désactiver</button>';
-  else if(pushState==='denied') h+='<p class="muted small" style="margin:4px 0 0">Bloquées pour cette application. Autorise-les dans les Réglages du téléphone, rubrique Notifications.</p>';
-  else if(pushState==='install') h+='<p class="muted small" style="margin:4px 0 0">Sur iPhone, ajoute l’application à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil ») et ouvre-la depuis son icône pour activer les notifications.</p>';
-  else h+='<p class="muted small" style="margin:4px 0 10px">Désactivées sur cet appareil.</p><button class="btn primary small" data-act="pushOn">Activer</button>';
-  return h+'</section>';
+  if(!pushState) return '';
+  var h='<section class="card pushrow"><div class="pushtxt"><h3>Notifications</h3>';
+  if(pushState==='on') return h+'<p class="muted small">Activées sur cet appareil</p></div><button class="sw on" role="switch" aria-checked="true" aria-label="Notifications" data-act="pushOff"><i></i></button></section>';
+  if(pushState==='denied') return h+'<p class="muted small">Bloquées : autorise-les dans les Réglages du téléphone, rubrique Notifications.</p></div></section>';
+  if(pushState==='install') return h+'<p class="muted small">Sur iPhone, ajoute d’abord l’application à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil ») et ouvre-la depuis son icône.</p></div></section>';
+  return h+'<p class="muted small">Désactivées sur cet appareil</p></div><button class="sw" role="switch" aria-checked="false" aria-label="Notifications" data-act="pushOn"><i></i></button></section>';
 }
 async function boot(){
   render();
