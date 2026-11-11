@@ -359,12 +359,13 @@ function badgesOf(m){
     ['♥','Esprit d’équipe','Participe à une cagnotte.',team]
   ];
 }
-function meView(m){
-  var life=lifetime(m.id), li=levelOf(life), nx=LEVELS[li+1], st=streaks(m.id);
-  var lvl='<section class="card me-level"><div class="eyebrow">Niveau '+(li+1)+'</div><div class="me-title">'+LEVELS[li][1]+'</div>'+
+function levelCard(m){
+  var life=lifetime(m.id), li=levelOf(life), nx=LEVELS[li+1];
+  return '<section class="card me-level"><div class="eyebrow">Niveau '+(li+1)+'</div><div class="me-title">'+LEVELS[li][1]+'</div>'+
     (nx?'<div class="bar"><i style="width:'+Math.max(0,Math.min(100,(life-LEVELS[li][0])/(nx[0]-LEVELS[li][0])*100))+'%"></i></div><p class="muted small">Encore '+(nx[0]-life)+' '+ptsWord(nx[0]-life)+' pour devenir « '+nx[1]+' »</p>'
         :'<p class="muted small">Niveau maximum atteint, bravo !</p>')+'</section>';
-  var strk='<section class="card me-streak"><div class="eyebrow">Série</div><div class="me-title">'+st.cur+' '+(st.cur>1?'jours':'jour')+' de suite</div><p class="muted small">'+(st.cur?'Continue, gagne des points aujourd’hui !':'Gagne des points aujourd’hui pour lancer ta série.')+' Record : '+st.best+' '+(st.best>1?'jours':'jour')+'.</p></section>';
+}
+function objectiveCard(m){
   var rs=S.rewards.slice().sort(function(a,b){return a.cost-b.cost;});
   var g=m.goalId&&rs.find(function(r){return r.id===m.goalId;}), bal=balance(m.id), obj;
   if(g){
@@ -372,14 +373,26 @@ function meView(m){
       '<button class="link" data-act="goalClear">Retirer mon objectif</button>';
   } else if(rs.length){
     obj='<p class="muted small">Choisis la récompense que tu veux atteindre.</p><div class="chips2">'+rs.map(function(r){return '<button class="btn small" data-act="goalSet" data-id="'+esc(r.id)+'">'+esc(r.label)+' · '+r.cost+'</button>';}).join('')+'</div>';
-  } else obj='<p class="muted small">Les adultes n’ont pas encore ajouté de récompenses.</p>';
+  } else obj='<p class="muted small">Il n’y a pas encore de récompenses.</p>';
+  return '<section class="card"><h3>Mon objectif</h3>'+obj+'</section>';
+}
+function meHeader(m){
+  var life=lifetime(m.id);
+  return '<section class="card" style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div style="flex:1;min-width:0"><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+life+' '+ptsWord(life)+' gagnés en tout</span></div><button class="btn small" data-act="avatarEdit" data-id="'+esc(m.id)+'">Mon avatar</button></section>';
+}
+function meView(m){
+  var st=streaks(m.id);
+  var strk='<section class="card me-streak"><div class="eyebrow">Série</div><div class="me-title">'+st.cur+' '+(st.cur>1?'jours':'jour')+' de suite</div><p class="muted small">'+(st.cur?'Continue, gagne des points aujourd’hui !':'Gagne des points aujourd’hui pour lancer ta série.')+' Record : '+st.best+' '+(st.best>1?'jours':'jour')+'.</p></section>';
   var bd=badgesOf(m), got=bd.filter(function(b){return b[3];}).length;
   var badges='<section class="card"><h3>Badges <span class="muted small">'+got+' / '+bd.length+'</span></h3><div class="badges">'+bd.map(function(b){
     return '<div class="bdg'+(b[3]?' on':'')+'"><div class="bdg-i">'+b[0]+'</div><div class="bdg-t">'+b[1]+'</div><div class="bdg-h">'+(b[3]?'Obtenu':b[2])+'</div></div>';
   }).join('')+'</div></section>';
-  return '<section class="card" style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div style="flex:1;min-width:0"><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+life+' '+ptsWord(life)+' gagnés en tout</span></div><button class="btn small" data-act="avatarEdit" data-id="'+esc(m.id)+'">Mon avatar</button></section>'+
-    lvl+strk+'<section class="card"><h3>Mon objectif</h3>'+obj+'</section>'+badges+
+  return meHeader(m)+levelCard(m)+strk+objectiveCard(m)+badges+
     '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:30})+'</section>';
+}
+function meAdult(m){
+  return '<div class="section-title" style="margin-top:6px"><h3>Toi</h3></div>'+meHeader(m)+levelCard(m)+objectiveCard(m)+
+    '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:10})+'</section>';
 }
 function todoItems(){
   var it=[];
@@ -529,6 +542,7 @@ function familyView(){
   out+='<section class="card"><div class="section-title"><h3>Membres</h3></div><ul class="list">'+ms.map(function(x){
     return '<li><div class="mrow">'+avatar(x)+'<div class="mmain"><div class="hlabel">'+esc(x.name)+'</div><div class="muted small">'+(isAdult(x)?'Adulte':'Enfant')+'</div></div><button class="link" data-act="editMember" data-id="'+esc(x.id)+'">Modifier</button></div></li>';
   }).join('')+'</ul><button class="btn block" style="margin-top:8px" data-act="addMember">Ajouter un membre</button></section>';
+  var me0=mById(sess); if(me0) out+=meAdult(me0);
   out+='<section class="card"><div class="section-title"><h3>Tâches types</h3></div><p class="muted small" style="margin-top:4px">Les enfants choisissent parmi ces tâches et envoient une photo. Les points sont ceux que tu fixes ici.</p>'+
     (ts.length?'<ul class="list">'+ts.map(function(t){return '<li><div class="mrow"><div class="mmain"><div class="hlabel">'+esc(t.label)+'</div></div><span class="hpts plus">'+sg(t.points)+'</span><button class="link" data-act="taskEdit" data-id="'+esc(t.id)+'">Modifier</button></div></li>';}).join('')+'</ul>':'')+
     '<button class="btn block" style="margin-top:8px" data-act="taskEdit">Ajouter une tâche</button></section>';
