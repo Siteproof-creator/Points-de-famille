@@ -42,7 +42,77 @@ function ago(ts){
   if(s<86400) return 'il y a '+Math.floor(s/3600)+' h';
   return new Date(ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
 }
+/* ---------- avatars personnalisés ---------- */
+var AV={
+  bg:['#bfe9dc','#ffd9b3','#cfe0ff','#ffc8dd','#fff0a6','#dcd0ff','#c9f0a8','#e6e6ea'],
+  skin:['#fde0c8','#f5c6a0','#e0a878','#c68642','#8d5524','#5a3a22'],
+  hairc:['#2b1d14','#5a3825','#b5651d','#e8b84a','#c0392b','#8e8e93','#3b82f6','#ec4899'],
+  outc:['#e74c3c','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#374151'],
+  hair:['Chauve','Courts','Pointus','Longs','Carré','Afro','Chignon','Queue','Couettes'],
+  eyes:['Ronds','Contents','Grands'],
+  mouth:['Sourire','Grand sourire','Sérieux'],
+  outfit:['T-shirt','Capuche','Rayures','Chemise','Héros','Salopette'],
+  acc:['Aucun','Lunettes','Soleil','Casquette','Nœud','Couronne','Boucles','Taches']
+};
+var AV_DEF={b:0,s:1,h:1,hc:1,e:0,m:0,o:0,oc:1,a:0};
+function avParse(v){
+  if(!v||v.charAt(0)!=='{') return null;
+  try{ var o=JSON.parse(v), r={}; Object.keys(AV_DEF).forEach(function(k){ var n=o[k]|0; r[k]=n<0?0:n; }); return r; }catch(x){ return null; }
+}
+function avLimit(c){
+  return {b:c.b%AV.bg.length,s:c.s%AV.skin.length,h:c.h%AV.hair.length,hc:c.hc%AV.hairc.length,e:c.e%AV.eyes.length,m:c.m%AV.mouth.length,o:c.o%AV.outfit.length,oc:c.oc%AV.outc.length,a:c.a%AV.acc.length};
+}
+function avSvg(cfg){
+  var c=avLimit(cfg), sk=AV.skin[c.s], hc=AV.hairc[c.hc], oc=AV.outc[c.oc], ink='#2a1f1a', back='', front='', body='', face='', acc='';
+  var fringe='<path d="M29 42Q30 25 50 24Q70 25 71 42Q60 32 50 34Q40 32 29 42Z" fill="'+hc+'"/>';
+  var cap='<path d="M29 41Q30 22 50 22Q70 22 71 41Q60 33 50 33Q40 33 29 41Z" fill="'+hc+'"/>';
+  switch(c.h){
+    case 1: front=cap; break;
+    case 2: front='<path d="M29 42L31 24L39 32L44 18L50 30L57 18L61 32L69 24L71 42Q62 32 50 33Q38 32 29 42Z" fill="'+hc+'"/>'; break;
+    case 3: back='<path d="M27 44Q24 16 50 18Q76 16 73 44L76 80Q64 84 62 70L38 70Q36 84 24 80Z" fill="'+hc+'"/>'; front=fringe; break;
+    case 4: back='<path d="M26 46Q23 16 50 17Q77 16 74 46L74 62Q72 66 66 62L34 62Q28 66 26 62Z" fill="'+hc+'"/>'; front=fringe; break;
+    case 5: back='<g fill="'+hc+'"><circle cx="30" cy="34" r="10"/><circle cx="40" cy="24" r="11"/><circle cx="52" cy="22" r="11"/><circle cx="63" cy="25" r="11"/><circle cx="72" cy="36" r="10"/><circle cx="27" cy="46" r="7"/><circle cx="73" cy="46" r="7"/></g>'; front='<path d="M31 40Q50 27 69 40Q50 33 31 40Z" fill="'+hc+'"/>'; break;
+    case 6: back='<circle cx="50" cy="16" r="9" fill="'+hc+'"/>'; front=cap; break;
+    case 7: back='<path d="M68 38Q88 36 83 64Q80 72 74 63Q79 48 66 46Z" fill="'+hc+'"/>'; front=cap; break;
+    case 8: back='<circle cx="22" cy="54" r="9" fill="'+hc+'"/><circle cx="78" cy="54" r="9" fill="'+hc+'"/>'; front=cap+'<circle cx="29" cy="46" r="2.5" fill="'+oc+'"/><circle cx="71" cy="46" r="2.5" fill="'+oc+'"/>'; break;
+  }
+  switch(c.o){
+    case 0: body='<path d="M14 100Q16 76 38 74L62 74Q84 76 86 100Z" fill="'+oc+'"/><path d="M42 74Q50 82 58 74Z" fill="'+sk+'"/>'; break;
+    case 1: body='<path d="M14 100Q16 76 38 74L62 74Q84 76 86 100Z" fill="'+oc+'"/><path d="M33 76Q50 92 67 76Q60 70 50 70Q40 70 33 76Z" fill="#000" opacity=".22"/><path d="M42 74Q50 82 58 74Z" fill="'+sk+'"/><path d="M45 81L45 93M55 81L55 93" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'; break;
+    case 2: body='<path d="M14 100Q16 76 38 74L62 74Q84 76 86 100Z" fill="'+oc+'"/><path d="M20 84L80 84M17 92L83 92" stroke="#fff" stroke-width="3" opacity=".7"/><path d="M42 74Q50 82 58 74Z" fill="'+sk+'"/>'; break;
+    case 3: body='<path d="M14 100Q16 76 38 74L62 74Q84 76 86 100Z" fill="'+oc+'"/><path d="M42 74L50 87L43 90Z M58 74L50 87L57 90Z" fill="#fff"/><circle cx="50" cy="93" r="1.6" fill="#fff"/>'; break;
+    case 4: body='<path d="M14 100Q16 76 38 74L62 74Q84 76 86 100Z" fill="'+oc+'"/><path d="M42 74Q50 82 58 74Z" fill="'+sk+'"/><path d="M50 83L57 90L50 97L43 90Z" fill="#fbbf24"/>'; break;
+    case 5: body='<path d="M14 100Q16 76 38 74L62 74Q84 76 86 100Z" fill="#f4f4f6"/><path d="M36 74L42 74L42 86L58 86L58 74L64 74L64 100L36 100Z" fill="'+oc+'"/><path d="M42 74Q50 82 58 74Z" fill="'+sk+'"/>'; break;
+  }
+  var eyes=[
+    '<circle cx="42" cy="47" r="2.6" fill="'+ink+'"/><circle cx="58" cy="47" r="2.6" fill="'+ink+'"/>',
+    '<path d="M37.5 48Q42 42 46.5 48M53.5 48Q58 42 62.5 48" fill="none" stroke="'+ink+'" stroke-width="2.4" stroke-linecap="round"/>',
+    '<circle cx="42" cy="47" r="4.6" fill="#fff"/><circle cx="58" cy="47" r="4.6" fill="#fff"/><circle cx="42.6" cy="47.6" r="2.6" fill="'+ink+'"/><circle cx="58.6" cy="47.6" r="2.6" fill="'+ink+'"/>'
+  ][c.e];
+  var mouth=[
+    '<path d="M42 56Q50 63 58 56" fill="none" stroke="'+ink+'" stroke-width="2.4" stroke-linecap="round"/>',
+    '<path d="M41 55Q50 68 59 55Z" fill="#7a2a2a"/><path d="M45 61Q50 64 55 61Q50 59 45 61Z" fill="#e46f78"/>',
+    '<path d="M45 58L55 58" stroke="'+ink+'" stroke-width="2.4" stroke-linecap="round"/>'
+  ][c.m];
+  var cheeks='<circle cx="37" cy="54" r="3.6" fill="#ff7a90" opacity=".3"/><circle cx="63" cy="54" r="3.6" fill="#ff7a90" opacity=".3"/>';
+  switch(c.a){
+    case 1: acc='<g fill="none" stroke="'+ink+'" stroke-width="2"><circle cx="42" cy="47" r="7.5"/><circle cx="58" cy="47" r="7.5"/><path d="M49.5 47L50.5 47"/></g>'; break;
+    case 2: acc='<g fill="'+ink+'"><rect x="33" y="41" width="15" height="10" rx="4"/><rect x="52" y="41" width="15" height="10" rx="4"/></g><path d="M48 45L52 45" stroke="'+ink+'" stroke-width="2"/>'; break;
+    case 3: acc='<path d="M28 38Q30 17 50 17Q70 17 72 38Z" fill="'+oc+'"/><path d="M62 36L86 38Q88 43 79 43L60 42Z" fill="'+oc+'"/><path d="M28 38L72 38" stroke="#000" opacity=".18" stroke-width="2"/>'; break;
+    case 4: acc='<g fill="'+oc+'"><path d="M66 27L54 20L54 34Z"/><path d="M66 27L78 20L78 34Z"/><circle cx="66" cy="27" r="3.8"/></g>'; break;
+    case 5: acc='<path d="M36 29L38 14L44 22L50 12L56 22L62 14L64 29Z" fill="#fbbf24" stroke="#d99a06" stroke-width="1.4" stroke-linejoin="round"/>'; break;
+    case 6: acc='<circle cx="29" cy="55" r="2.8" fill="#fbbf24"/><circle cx="71" cy="55" r="2.8" fill="#fbbf24"/>'; break;
+    case 7: acc='<g fill="#a5683c" opacity=".7"><circle cx="38" cy="54" r="1"/><circle cx="42" cy="56" r="1"/><circle cx="36" cy="57" r="1"/><circle cx="62" cy="54" r="1"/><circle cx="58" cy="56" r="1"/><circle cx="64" cy="57" r="1"/></g>'; break;
+  }
+  return '<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="'+AV.bg[c.b]+'"/>'+back+
+    '<rect x="43" y="62" width="14" height="16" fill="'+sk+'"/>'+body+
+    '<ellipse cx="29.5" cy="50" rx="3.4" ry="5" fill="'+sk+'"/><ellipse cx="70.5" cy="50" rx="3.4" ry="5" fill="'+sk+'"/>'+
+    '<ellipse cx="50" cy="46" rx="21" ry="24" fill="'+sk+'"/>'+front+eyes+cheeks+mouth+acc+'</svg>';
+}
 function avatar(m,cls){
+  var v=m.avatar||'', cfg=avParse(v);
+  if(cfg) return '<span class="avatar pic '+(cls||'')+'">'+avSvg(cfg)+'</span>';
+  if(v.indexOf('data:image/jpeg;base64,')===0) return '<span class="avatar pic '+(cls||'')+'"><img alt="" src="'+esc(v)+'"></span>';
   var h=HUES[(m.hue||0)%HUES.length];
   return '<span class="avatar '+(cls||'')+'" style="--h:'+h+'">'+esc((m.name||'?').trim().charAt(0).toUpperCase())+'</span>';
 }
@@ -72,6 +142,23 @@ function newCode(){
 function rerender(){ var a=document.activeElement; if(a&&a!==document.body&&a.blur) a.blur(); dirty=false; render(); }
 
 /* ---------- photos (stored in their own collection, read only when an adult opens the request) ---------- */
+function squarePhoto(file,size){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      var c=document.createElement('canvas'); c.width=c.height=size;
+      var m=Math.min(img.width,img.height), sx=(img.width-m)/2, sy=(img.height-m)/2;
+      var cx=c.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,size,size);
+      cx.drawImage(img,sx,sy,m,m,0,0,size,size);
+      var q=.82, d=c.toDataURL('image/jpeg',q);
+      while(d.length>45000&&q>.4){ q-=.1; d=c.toDataURL('image/jpeg',q); }
+      URL.revokeObjectURL(url);
+      if(d.length>55000) rej(new Error('big')); else res(d);
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('read')); };
+    img.src=url;
+  });
+}
 function compressPhoto(file){
   return new Promise(function(res,rej){
     var url=URL.createObjectURL(file), img=new Image();
@@ -159,7 +246,7 @@ function welcomeHtml(){
   return '<div class="intro"><h1 style="font-size:34px;font-weight:800">Points de famille</h1><p class="muted">'+intro+'</p>'+banners()+seg+form+priv+'</div>';
 }
 function topbar(m){
-  return '<header class="topbar">'+avatar(m,'lg')+'<div class="who"><div class="hi">Salut '+esc(m.name)+'</div><div class="muted small">'+(isAdult(m)?'Adulte':'Enfant')+'</div></div><button class="btn small" data-act="logout">Quitter</button></header>';
+  return '<header class="topbar"><button class="avbtn" data-act="avatarEdit" data-id="'+esc(m.id)+'" aria-label="Changer mon avatar">'+avatar(m,'lg')+'</button><div class="who"><div class="hi">Salut '+esc(m.name)+'</div><div class="muted small">'+(isAdult(m)?'Adulte':'Enfant')+'</div></div><button class="btn small" data-act="logout">Quitter</button></header>';
 }
 function tabsFor(m){
   var t=[['home','Accueil',ICON.home]];
@@ -290,7 +377,7 @@ function meView(m){
   var badges='<section class="card"><h3>Badges <span class="muted small">'+got+' / '+bd.length+'</span></h3><div class="badges">'+bd.map(function(b){
     return '<div class="bdg'+(b[3]?' on':'')+'"><div class="bdg-i">'+b[0]+'</div><div class="bdg-t">'+b[1]+'</div><div class="bdg-h">'+(b[3]?'Obtenu':b[2])+'</div></div>';
   }).join('')+'</div></section>';
-  return '<section class="card" style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+life+' '+ptsWord(life)+' gagnés en tout</span></div></section>'+
+  return '<section class="card" style="display:flex;gap:12px;align-items:center">'+avatar(m,'lg')+'<div style="flex:1;min-width:0"><h2 style="padding:0">'+esc(m.name)+'</h2><span class="muted small">'+life+' '+ptsWord(life)+' gagnés en tout</span></div><button class="btn small" data-act="avatarEdit" data-id="'+esc(m.id)+'">Mon avatar</button></section>'+
     lvl+strk+'<section class="card"><h3>Mon objectif</h3>'+obj+'</section>'+badges+
     '<section class="card"><h3>Mon historique</h3>'+historyHtml(m.id,{limit:30})+'</section>';
 }
@@ -537,6 +624,25 @@ function sheetBody(){
     '<div class="field"><span class="lbl">Rôle</span><div class="seg"><label><input type="radio" name="role" value="child" checked><span>Enfant</span></label><label><input type="radio" name="role" value="adult"><span>Adulte</span></label></div><span class="muted small">Le rôle décide ce que la personne pourra faire quand elle rejoindra avec son prénom et le code de famille.</span></div>'+
     '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Ajouter</button></form>';
   }
+  if(s.type==='avatar'){
+    var am=mById(s.id); if(!am) return '';
+    var cfg=s.cfg, prevM={name:am.name,hue:am.hue,avatar:s.photo||(cfg?JSON.stringify(cfg):null)};
+    var row=function(label,key,list,kind){
+      return '<div class="field"><span class="lbl">'+label+'</span><div class="avrow">'+list.map(function(x,i){
+        var on=cfg&&cfg[key]===i;
+        if(kind==='dot') return '<button type="button" class="avdot'+(on?' on':'')+'" style="background:'+x+'" data-act="avOpt" data-k="'+key+'" data-i="'+i+'" aria-label="Couleur '+(i+1)+'"></button>';
+        var t=avLimit(Object.assign({},cfg||AV_DEF)); t[key]=i;
+        return '<button type="button" class="avopt'+(on?' on':'')+'" data-act="avOpt" data-k="'+key+'" data-i="'+i+'"><span class="avatar">'+avSvg(t)+'</span><span>'+esc(x)+'</span></button>';
+      }).join('')+'</div></div>';
+    };
+    var ctrl=cfg?(row('Peau','s',AV.skin,'dot')+row('Coiffure','h',AV.hair)+row('Couleur des cheveux','hc',AV.hairc,'dot')+row('Yeux','e',AV.eyes)+row('Bouche','m',AV.mouth)+row('Habit','o',AV.outfit)+row('Couleur de l’habit','oc',AV.outc,'dot')+row('Accessoire','a',AV.acc)+row('Fond','b',AV.bg,'dot')):
+      '<p class="muted small">'+(s.photo?'Tu utilises une photo. Tu peux aussi créer un avatar.':'Ton profil affichera la première lettre du prénom. Tu peux créer un avatar ou ajouter une photo.')+'</p>';
+    return '<h2>Avatar de '+esc(am.name)+'</h2><div class="avprev">'+avatar(prevM,'xl')+'</div>'+
+      '<div class="avtop"><button type="button" class="btn small'+(cfg?' primary':'')+'" data-act="avMode" data-mode="avatar">Créer un avatar</button>'+
+      '<label class="btn small'+(s.photo?' primary':'')+'" for="f-avphoto">Utiliser une photo</label><input id="f-avphoto" type="file" accept="image/*" hidden>'+
+      '<button type="button" class="btn small" data-act="avMode" data-mode="letter">Juste la lettre</button></div>'+ctrl+
+      '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="button" data-act="avSave">Enregistrer</button>';
+  }
   if(s.type==='editMember'){
     var em=mById(s.id); if(!em) return '';
     var adults=S.members.filter(isAdult).length;
@@ -544,6 +650,7 @@ function sheetBody(){
     var dm=blocked?'<p class="muted small">'+(em.id===sess?'Tu ne peux pas supprimer ton propre profil.':'Il faut garder au moins un adulte.')+'</p>':(s.confirm?'<p class="muted small">Tous les points de '+esc(em.name)+' seront supprimés.</p><div class="mactions"><button type="button" class="btn danger" style="flex:1" data-act="memberDelGo">Supprimer</button><button type="button" class="btn" style="flex:1" data-act="delcancel">Annuler</button></div>':'<button type="button" class="btn danger block" data-act="delaskThing">Supprimer ce membre</button>');
     return '<h2>Modifier '+esc(em.name)+'</h2><form data-form="editMember" data-id="'+esc(em.id)+'"><div class="field"><label for="f-name">Prénom</label><input id="f-name" name="name" type="text" maxlength="30" autocomplete="off" required value="'+esc(em.name)+'"></div>'+
     '<div class="field"><span class="lbl">Rôle</span><div class="seg"><label><input type="radio" name="role" value="child"'+(isAdult(em)?'':' checked')+'><span>Enfant</span></label><label><input type="radio" name="role" value="adult"'+(isAdult(em)?' checked':'')+'><span>Adulte</span></label></div></div>'+
+    '<button type="button" class="btn block" data-act="avatarEdit" data-id="'+esc(em.id)+'">Changer l’avatar</button>'+
     '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Enregistrer</button>'+dm+'</form>';
   }
   return '';
@@ -559,6 +666,11 @@ function openSheet(s){
   if(s.type!=='member'&&s.type!=='redeem'&&s.type!=='pot'){
     setTimeout(function(){ var i=$sheet.querySelector('input:not([type=radio]):not([hidden]),select'); if(i) i.focus(); },60);
   }
+}
+function avRender(){
+  var sc=$sheet.querySelector('.sheet'), top=sc?sc.scrollTop:0;
+  renderSheet();
+  sc=$sheet.querySelector('.sheet'); if(sc) sc.scrollTop=top;
 }
 function closeSheet(){ sheet=null; renderSheet(); }
 
@@ -606,6 +718,22 @@ async function act(name,ds){
       if(await potRpc('delete_pot_reward',{p_pot:sheet.pot,p_id:sheet.id},'Récompense supprimée.')) openSheet({type:'pot',id:sheet.pot});
       break;
     case 'potUsed': await potRpc('mark_pot_used',{p_pot:ds.id},'Parfait, c’est noté.'); break;
+    case 'avatarEdit': {
+      var am0=mById(ds.id); if(!am0) break;
+      var c0=avParse(am0.avatar), ph0=(am0.avatar&&!c0&&am0.avatar.indexOf('data:image/jpeg;base64,')===0)?am0.avatar:null;
+      openSheet({type:'avatar',id:ds.id,cfg:c0?avLimit(c0):(ph0?null:Object.assign({},AV_DEF,{b:(am0.hue||0)%AV.bg.length})),photo:ph0});
+      break; }
+    case 'avMode':
+      if(ds.mode==='avatar'){ sheet.cfg=sheet.cfg||Object.assign({},AV_DEF); sheet.photo=null; }
+      else { sheet.cfg=null; sheet.photo=null; sheet.letter=true; }
+      avRender(); break;
+    case 'avOpt':
+      if(sheet&&sheet.cfg){ sheet.cfg[ds.k]=parseInt(ds.i,10); sheet.photo=null; avRender(); }
+      break;
+    case 'avSave': {
+      var val=sheet.photo||(sheet.cfg?JSON.stringify(sheet.cfg):null), aid=sheet.id;
+      if(await w(async function(){ dbErr(await sb.rpc('set_avatar',{p_member:aid,p_avatar:val})); })){ closeSheet(); toast('Avatar enregistré !'); }
+      break; }
     case 'goalSet':
       if(await w(async function(){ dbErr(await sb.rpc('set_goal',{p_reward:ds.id})); })) toast('Objectif choisi !');
       break;
@@ -669,6 +797,11 @@ document.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&sheet) closeSheet(); });
 document.addEventListener('change',async function(e){
   var el=e.target; if(el&&el.name==='task'){ var er0=document.getElementById('err'); if(er0) er0.textContent=''; return; }
+  if(el&&el.id==='f-avphoto'&&el.files&&el.files[0]&&sheet&&sheet.type==='avatar'){
+    try{ sheet.photo=await squarePhoto(el.files[0],160); sheet.cfg=null; avRender(); }
+    catch(x){ toast('Impossible de lire cette photo. Essaie-en une autre.'); }
+    return;
+  }
   if(!el||el.id!=='f-photo'||!el.files||!el.files[0]) return;
   var er=document.getElementById('err'); if(er) er.textContent='';
   try{ earnPhoto=await compressPhoto(el.files[0]); }
@@ -787,7 +920,7 @@ document.addEventListener('submit',async function(e){
 
 /* ---------- data (Supabase) ---------- */
 var fromRow={
-  members:function(r){return {id:r.id,name:r.name,role:r.role,hue:r.hue,goalId:r.goal_reward_id||null,ts:Date.parse(r.created_at)};},
+  members:function(r){return {id:r.id,name:r.name,role:r.role,hue:r.hue,goalId:r.goal_reward_id||null,avatar:r.avatar||null,ts:Date.parse(r.created_at)};},
   tasks:function(r){return {id:r.id,label:r.label,points:r.points,ts:Date.parse(r.created_at)};},
   rewards:function(r){return {id:r.id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
   entries:function(r){return {id:r.id,memberId:r.member_id,taskId:r.task_id,label:r.label,points:r.points,status:r.status,photo:!!r.photo_path,ts:Date.parse(r.created_at),decidedTs:r.decided_at?Date.parse(r.decided_at):null};},

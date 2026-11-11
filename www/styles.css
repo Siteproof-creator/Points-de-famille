@@ -276,3 +276,18 @@ button.rrow .rname{flex:1;min-width:0}
 .bdg-i{font-size:1.3rem;font-weight:800;line-height:1.6}
 .bdg-t{font-size:.78rem;font-weight:700}
 .bdg-h{font-size:.68rem;opacity:.75;margin-top:2px}
+
+/* Avatars personnalisés */
+.avatar.pic{background:none;overflow:hidden;padding:0}
+.avatar.pic svg,.avatar.pic img{width:100%;height:100%;display:block;object-fit:cover}
+.avatar.xl{width:112px;height:112px}
+.avbtn{border:0;background:none;padding:0;border-radius:50%;cursor:pointer;flex:none;line-height:0}
+.avprev{display:flex;justify-content:center}
+.avtop{display:flex;gap:8px;flex-wrap:wrap}
+.avtop label.btn{cursor:pointer}
+.avrow{display:flex;flex-wrap:wrap;gap:8px}
+.avdot{width:34px;height:34px;border-radius:50%;border:2px solid rgba(127,127,127,.35);padding:0}
+.avdot.on,.avopt.on{outline:3px solid var(--accent,#0b8f74);outline-offset:2px}
+.avopt{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;font-size:.7rem;padding:2px;border-radius:14px;width:64px;color:inherit}
+.avopt .avatar{width:52px;height:52px;background:none;overflow:hidden;box-shadow:none}
+.avopt .avatar svg{width:100%;height:100%;display:block}
