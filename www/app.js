@@ -10,7 +10,7 @@ var store=null, sb=null, slow=false, dirty=false, booted=false, bootError='', of
 var CFG=window.PF_CONFIG||{};
 var TABLE={members:'members',entries:'entries',rewards:'rewards',redemptions:'redemptions',tasks:'tasks',family:'families',pots:'pots',potMembers:'pot_members',potRewards:'pot_rewards',events:'events'};
 var JOIN_ERR={bad_code:'Code de famille incorrect.',no_profile:'Aucun profil à ce prénom. Demande à un adulte de t’ajouter dans l’onglet Famille.',throttled:'Trop d’essais. Réessaie dans quelques minutes.',not_signed_in:'Connexion impossible. Réessaie.'};
-var sess=null, tab='home', rankPeriod='week', sheet=null, toastTimer=null;
+var sess=null, tab='home', settingsOpen=false, rankPeriod='week', sheet=null, toastTimer=null;
 var photoCache={}, photoLoading={}, earnPhoto=null;
 var HUES=[168,22,205,340,48,262,120,0];
 
@@ -724,11 +724,15 @@ function familyView(){
     return '<li><div class="mrow">'+avatar(x)+'<div class="mmain"><div class="hlabel">'+esc(x.name)+'</div><div class="muted small">'+(isAdult(x)?'Adulte':'Enfant')+'</div></div><button class="link" data-act="editMember" data-id="'+esc(x.id)+'">Modifier</button></div></li>';
   }).join('')+'</ul><button class="btn block" style="margin-top:8px" data-act="addMember">Ajouter un membre</button></section>';
   var me0=mById(sess); if(me0) out+=meAdult(me0);
-  out+='<section class="card"><div class="section-title"><h3>Tâches types</h3></div><p class="muted small" style="margin-top:4px">Les enfants choisissent parmi ces tâches et envoient une photo. Les points sont ceux que tu fixes ici.</p>'+
-    (ts.length?'<ul class="list">'+ts.map(function(t){return '<li><div class="mrow"><div class="mmain"><div class="hlabel">'+esc(t.label)+'</div></div><span class="hpts plus">'+sg(t.points)+'</span><button class="link" data-act="taskEdit" data-id="'+esc(t.id)+'">Modifier</button></div></li>';}).join('')+'</ul>':'')+
-    '<button class="btn block" style="margin-top:8px" data-act="taskEdit">Ajouter une tâche</button></section>';
-  var me1=mById(sess); if(me1) out+=rewardsCompact(me1);
-  out+='<section class="card"><h3>Application</h3>'+(CFG.privacyUrl?'<p style="margin:6px 0"><a class="link" href="'+esc(CFG.privacyUrl)+'" target="_blank" rel="noopener">Politique de confidentialité</a></p>':'')+'<p class="muted small" style="margin-bottom:10px">Supprime définitivement la famille, les profils, les points et les photos sur tous les appareils.</p><button class="btn danger block" data-act="deleteFamilyAsk">Supprimer la famille et ses données</button></section>';
+  out+='<button class="card setbtn" data-act="toggleSettings" aria-expanded="'+settingsOpen+'"><span class="settx"><b>Réglages</b><small class="muted">Tâches types, récompenses, apparence, notifications…</small></span><svg class="chev" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
+  if(settingsOpen){
+    out+='<section class="card"><div class="section-title"><h3>Tâches types</h3></div><p class="muted small" style="margin-top:4px">Les enfants choisissent parmi ces tâches et envoient une photo. Les points sont ceux que tu fixes ici.</p>'+
+      (ts.length?'<ul class="list">'+ts.map(function(t){return '<li><div class="mrow"><div class="mmain"><div class="hlabel">'+esc(t.label)+'</div></div><span class="hpts plus">'+sg(t.points)+'</span><button class="link" data-act="taskEdit" data-id="'+esc(t.id)+'">Modifier</button></div></li>';}).join('')+'</ul>':'')+
+      '<button class="btn block" style="margin-top:8px" data-act="taskEdit">Ajouter une tâche</button></section>';
+    var me1=mById(sess); if(me1) out+=rewardsCompact(me1);
+    out+=themeCard()+pushCard();
+    out+='<section class="card"><h3>Application</h3>'+(CFG.privacyUrl?'<p style="margin:6px 0"><a class="link" href="'+esc(CFG.privacyUrl)+'" target="_blank" rel="noopener">Politique de confidentialité</a></p>':'')+'<p class="muted small" style="margin-bottom:10px">Supprime définitivement la famille, les profils, les points et les photos sur tous les appareils.</p><button class="btn danger block" data-act="deleteFamilyAsk">Supprimer la famille et ses données</button></section>';
+  }
   return out;
 }
 function render(){
@@ -750,7 +754,7 @@ function render(){
   else if(tab==='family') body=familyView();
   else if(tab==='me') body=meView(m);
   else if(tab==='cal') body=calView(m);
-  if(tab==='family'||tab==='me') body+=themeCard()+pushCard();
+  if(tab==='me') body+=themeCard()+pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
   if(sheet&&(sheet.type==='member'||sheet.type==='pot')) renderSheet();
@@ -926,6 +930,7 @@ async function act(name,ds){
     case 'retry': bootError=''; booted=false; render(); boot(); break;
     case 'deleteFamilyAsk': openSheet({type:'deleteFamily'}); break;
     case 'theme': themeSet(ds.v); break;
+    case 'toggleSettings': settingsOpen=!settingsOpen; render(); break;
     case 'pushOn': await pushEnable(); break;
     case 'pushOff': await pushDisable(); break;
     case 'pushLater': pushSnooze(); render(); break;
