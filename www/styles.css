@@ -512,3 +512,9 @@ input:focus,select:focus{outline:0;border-color:var(--accent)}
 .settx small{font-size:13px}
 .setbtn .chev{flex:none;color:var(--muted);transition:transform .2s}
 .setbtn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* barre d'onglets : le nom de l'onglet actif passe sous l'icône, rien ne bouge */
+.tabs .tab,.tabs .tab[aria-current="page"]{flex:1!important;min-width:0}
+.tabs .tab[aria-current="page"]{flex-direction:column;gap:2px;justify-content:center}
+.tabs .tab[aria-current="page"] span:not(.badge){display:block;font-size:9.5px;letter-spacing:-.03em;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab.cal,.tab.cal[aria-current="page"]{flex:1!important;flex-direction:column;gap:0;justify-content:center;padding-top:0;padding-bottom:0;background:none;box-shadow:none}
