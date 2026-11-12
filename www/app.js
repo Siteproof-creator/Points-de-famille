@@ -737,7 +737,7 @@ function render(){
   else if(tab==='family') body=familyView();
   else if(tab==='me') body=meView(m);
   else if(tab==='cal') body=calView(m);
-  if(tab==='family'||tab==='me') body+=pushCard();
+  if(tab==='family'||tab==='me') body+=themeCard()+pushCard();
   $app.innerHTML=topbar(m)+'<main>'+banners()+body+'</main>'+tabbar(m);
   if(tab==='approve') loadPhotos();
   if(sheet&&(sheet.type==='member'||sheet.type==='pot')) renderSheet();
@@ -912,6 +912,7 @@ async function act(name,ds){
     case 'welcome': welcomeMode=ds.m; rerender(); break;
     case 'retry': bootError=''; booted=false; render(); boot(); break;
     case 'deleteFamilyAsk': openSheet({type:'deleteFamily'}); break;
+    case 'theme': themeSet(ds.v); break;
     case 'pushOn': await pushEnable(); break;
     case 'pushOff': await pushDisable(); break;
     case 'pushLater': pushSnooze(); render(); break;
@@ -1500,6 +1501,20 @@ function pushBanner(){
   if(pushState==='off') return '<section class="card pushcard"><h3>Notifications</h3><p class="muted small" style="margin:4px 0 10px">Reçois une alerte quand une demande arrive ou qu’elle est validée.</p><div class="mactions"><button class="btn primary small" data-act="pushOn">Activer</button><button class="btn small" data-act="pushLater">Plus tard</button></div></section>';
   return '<p class="note">Pour recevoir des notifications sur iPhone, ajoute d’abord l’application à l’écran d’accueil (Partager, puis « Sur l’écran d’accueil »), puis ouvre-la depuis son icône. <button class="link" data-act="pushLater">Masquer</button></p>';
 }
+/* ---------- apparence : clair, sombre ou automatique ---------- */
+function themeGet(){ try{ var t=localStorage.getItem('pf-theme'); return (t==='light'||t==='dark')?t:'auto'; }catch(e){ return 'auto'; } }
+function themeApply(){
+  var t=themeGet(), r=document.documentElement;
+  if(t==='auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme',t);
+  var dark=t==='dark'||(t==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+  var mt=document.querySelector('meta[name=theme-color]'); if(mt) mt.setAttribute('content',dark?'#0A0A12':'#F3F4EC');
+}
+function themeSet(t){ try{ if(t==='auto') localStorage.removeItem('pf-theme'); else localStorage.setItem('pf-theme',t); }catch(e){} themeApply(); render(); }
+function themeCard(){
+  var t=themeGet();
+  var o=function(v,l){ return '<button class="o" data-act="theme" data-v="'+v+'" aria-pressed="'+(t===v)+'">'+l+'</button>'; };
+  return '<section class="card themecard"><h3>Apparence</h3><p class="muted small" style="margin:4px 0 12px">Choisis le mode clair ou sombre, ou laisse-le suivre ton téléphone.</p><div class="seg" role="group" aria-label="Apparence">'+o('light','Clair')+o('dark','Sombre')+o('auto','Auto')+'</div></section>';
+}
 function pushCard(){
   if(!pushState) return '';
   var h='<section class="card pushrow"><div class="pushtxt"><h3>Notifications</h3>';
@@ -1509,6 +1524,7 @@ function pushCard(){
   return h+'<p class="muted small">Désactivées sur cet appareil</p></div><button class="sw" role="switch" aria-checked="false" aria-label="Notifications" data-act="pushOn"><i></i></button></section>';
 }
 async function boot(){
+  themeApply();
   render();
   if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseKey){ bootError='La configuration de l’application est incomplète.'; booted=true; render(); return; }
   try{
