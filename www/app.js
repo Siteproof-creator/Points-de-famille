@@ -383,7 +383,7 @@ function topbar(m){
 function tabsFor(m){
   var t=[['home','Accueil',ICON.home]], cal=['cal','Planning',ICON.cal];
   if(isAdult(m)){
-    t.push(['approve','À valider',ICON.check],cal,['rank','Classement',ICON.trophy],['rewards','Récompenses',ICON.gift],['family','Famille',ICON.users]);
+    t.push(['approve','À valider',ICON.check],cal,['rank','Classement',ICON.trophy],['family','Famille',ICON.users]);
   } else {
     t.push(['rank','Classement',ICON.trophy],cal,['rewards','Récompenses',ICON.gift],['me','Moi',ICON.user]);
   }
@@ -701,6 +701,18 @@ function rewardsView(m){
     return '<section class="card reward"><div class="reward-top"><h3>'+esc(r.label)+'</h3><span class="cost">'+r.cost+'</span></div><div class="bar"><i style="width:'+Math.max(0,Math.min(100,bal/r.cost*100))+'%"></i></div><div class="reward-bottom">'+act+(adult?'<button class="link" data-act="rewardEdit" data-id="'+esc(r.id)+'">Modifier</button>':'')+'</div></section>';
   }).join('')+add;
 }
+function rewardsCompact(m){
+  var bal=balance(m.id);
+  var rs=S.rewards.slice().sort(function(a,b){return a.cost-b.cost||a.label.localeCompare(b.label,'fr');});
+  var h='<section class="card rwsmall"><div class="section-title"><h3>Récompenses</h3><span class="muted small">'+bal+' '+ptsWord(bal)+'</span></div>';
+  if(!rs.length) h+='<p class="muted small" style="margin-top:4px">Ajoute ce que les points permettent d’obtenir, et le nombre de points nécessaires.</p>';
+  else h+='<ul class="list">'+rs.map(function(r){
+    var mine=S.redemptions.some(function(x){return x.memberId===m.id&&x.rewardId===r.id&&x.status==='pending';});
+    var act=mine?'<span class="pill pending">En attente</span>':(bal>=r.cost?'<button class="btn primary small" data-act="redeemAsk" data-id="'+esc(r.id)+'">Utiliser</button>':'');
+    return '<li><div class="mrow"><div class="mmain"><div class="hlabel">'+esc(r.label)+'</div></div><span class="hpts">'+r.cost+'</span>'+act+'<button class="link" data-act="rewardEdit" data-id="'+esc(r.id)+'">Modifier</button></div></li>';
+  }).join('')+'</ul>';
+  return h+'<button class="btn block" style="margin-top:8px" data-act="rewardEdit">Ajouter une récompense</button></section>';
+}
 function familyView(){
   var ms=S.members.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);});
   var ts=S.tasks.slice().sort(function(a,b){return a.label.localeCompare(b.label,'fr');});
@@ -715,6 +727,7 @@ function familyView(){
   out+='<section class="card"><div class="section-title"><h3>Tâches types</h3></div><p class="muted small" style="margin-top:4px">Les enfants choisissent parmi ces tâches et envoient une photo. Les points sont ceux que tu fixes ici.</p>'+
     (ts.length?'<ul class="list">'+ts.map(function(t){return '<li><div class="mrow"><div class="mmain"><div class="hlabel">'+esc(t.label)+'</div></div><span class="hpts plus">'+sg(t.points)+'</span><button class="link" data-act="taskEdit" data-id="'+esc(t.id)+'">Modifier</button></div></li>';}).join('')+'</ul>':'')+
     '<button class="btn block" style="margin-top:8px" data-act="taskEdit">Ajouter une tâche</button></section>';
+  var me1=mById(sess); if(me1) out+=rewardsCompact(me1);
   out+='<section class="card"><h3>Application</h3>'+(CFG.privacyUrl?'<p style="margin:6px 0"><a class="link" href="'+esc(CFG.privacyUrl)+'" target="_blank" rel="noopener">Politique de confidentialité</a></p>':'')+'<p class="muted small" style="margin-bottom:10px">Supprime définitivement la famille, les profils, les points et les photos sur tous les appareils.</p><button class="btn danger block" data-act="deleteFamilyAsk">Supprimer la famille et ses données</button></section>';
   return out;
 }
