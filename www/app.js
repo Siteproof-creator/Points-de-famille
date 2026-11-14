@@ -530,8 +530,18 @@ var calMonth=null, calDay=null, calFilter='all';
 function dkey(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
 function parseDay(k){ var a=k.split('-'); return new Date(+a[0],+a[1]-1,+a[2]); }
 function frDay(k){ var t=parseDay(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); return t.charAt(0).toUpperCase()+t.slice(1); }
+function evHits(e,k){
+  if(e.day===k) return true;
+  if(!e.repeat||k<e.day) return false;
+  var a=parseDay(e.day), b=parseDay(k);
+  if(e.repeat==='day') return true;
+  if(e.repeat==='week') return Math.round((b-a)/864e5)%7===0;
+  if(e.repeat==='month'){ var last=new Date(b.getFullYear(),b.getMonth()+1,0).getDate(); return b.getDate()===Math.min(a.getDate(),last); }
+  return false;
+}
+var REPEAT_LBL={day:'Chaque jour',week:'Chaque semaine',month:'Chaque mois'};
 function eventsOn(k,m){
-  return S.events.filter(function(e){ return e.day===k&&(calFilter!=='me'||e.memberIds.indexOf(m.id)>=0); })
+  return S.events.filter(function(e){ return evHits(e,k)&&(calFilter!=='me'||e.memberIds.indexOf(m.id)>=0); })
     .sort(function(a,b){ return (a.time||'')<(b.time||'')?-1:((a.time||'')>(b.time||'')?1:a.title.localeCompare(b.title,'fr')); });
 }
 function calView(m){
@@ -553,7 +563,7 @@ function calView(m){
   if(!evs.length) h+='<p class="muted">'+(adult?'Rien de prévu ce jour-là. Appuie sur « Ajouter » pour planifier une tâche.':'Rien de prévu ce jour-là.')+'</p>';
   else h+='<ul class="list">'+evs.map(function(e){
     var who=e.memberIds.map(function(id){return mById(id);}).filter(Boolean), mine=e.memberIds.indexOf(m.id)>=0;
-    var row='<span class="evtime">'+(e.time?esc(e.time):'Journée')+'</span><div class="mmain"><div class="hlabel">'+esc(e.title)+'</div>'+(e.note?'<div class="muted small">'+esc(e.note)+'</div>':'')+
+    var row='<span class="evtime">'+(e.time?esc(e.time):'Journée')+'</span><div class="mmain"><div class="hlabel">'+esc(e.title)+'</div>'+(e.repeat?'<div class="muted small">↻ '+REPEAT_LBL[e.repeat]+'</div>':'')+(e.note?'<div class="muted small">'+esc(e.note)+'</div>':'')+
       '<div class="evwho">'+who.map(function(x){return '<span class="evp">'+avatar(x,'sm')+esc(x.name)+'</span>';}).join('')+'</div></div>'+(mine?'<span class="evmine">Pour toi</span>':'');
     return '<li>'+(adult?'<button class="rrow ev'+(mine?' mine':'')+'" data-act="evEdit" data-id="'+esc(e.id)+'">'+row+'</button>':'<div class="rrow ev'+(mine?' mine':'')+'">'+row+'</div>')+'</li>';
   }).join('')+'</ul>';
@@ -837,6 +847,7 @@ function sheetBody(){
       '<div class="field"><label for="f-day">Jour</label><input id="f-day" name="day" type="date" required value="'+esc(ev?ev.day:s.day)+'"></div>'+
       '<div class="field"><label class="taskopt"><input type="checkbox" id="f-allday" name="allday"'+(allday?' checked':'')+'><span class="tbody"><span>Toute la journée</span></span></label></div>'+
       '<div class="field"><label for="f-time">Heure</label><input id="f-time" name="time" type="time" value="'+esc(ev&&ev.time?ev.time:'')+'"></div>'+
+      '<div class="field"><span class="lbl">Répéter</span><div class="seg seg4">'+[['','Jamais'],['day','Jour'],['week','Semaine'],['month','Mois']].map(function(o){return '<label><input type="radio" name="repeat" value="'+o[0]+'"'+(((ev&&ev.repeat)||'')===o[0]?' checked':'')+'><span>'+o[1]+'</span></label>';}).join('')+'</div><span class="muted small">Tous les jours, toutes les semaines ou tous les mois, à partir du jour choisi.'+(ev&&ev.repeat?' Modifier ou supprimer change toute la série.':'')+'</span></div>'+
       '<div class="field"><label for="f-note">Note (facultatif)</label><input id="f-note" name="note" type="text" maxlength="200" autocomplete="off" value="'+esc(ev?ev.note:'')+'"></div>'+
       '<p class="err" id="err" role="alert"></p><button class="btn primary block" type="submit">Enregistrer</button>'+
       (ev?'<button class="btn danger block" type="button" data-act="evDelete" data-id="'+esc(ev.id)+'" style="margin-top:8px">Supprimer</button>':'')+'</form>';
@@ -1100,7 +1111,7 @@ document.addEventListener('submit',async function(e){
       if(!evWho.length){ err('Choisis au moins une personne.'); return; }
       if(!evDay){ err('Choisis un jour.'); return; }
       if(!evAll&&!evTime){ err('Choisis une heure, ou coche « Toute la journée ».'); return; }
-      var er=await sb.rpc('event_save',{p_id:form.dataset.id||null,p_title:evTask?'':evTitle,p_task:evTask||null,p_day:evDay,p_time:evAll?null:evTime,p_members:evWho,p_note:g('note')||null});
+      var er=await sb.rpc('event_save',{p_id:form.dataset.id||null,p_title:evTask?'':evTitle,p_task:evTask||null,p_day:evDay,p_time:evAll?null:evTime,p_members:evWho,p_note:g('note')||null,p_repeat:g('repeat')||null});
       if(er.error){ err(er.error.code==='P0001'?er.error.message:'Impossible pour le moment. Vérifie ta connexion.'); return; }
       calDay=evDay; calMonth=null; scheduleRefresh(); closeSheet(); toast('Ajouté au planning. Les personnes sont prévenues.');
     }
@@ -1196,7 +1207,7 @@ var fromRow={
   pots:function(r){return {id:r.id,name:r.name,createdBy:r.created_by,status:r.status,deadline:r.deadline?Date.parse(r.deadline):null,chosenId:r.chosen_reward_id,chosenLabel:r.chosen_label,chosenCost:r.chosen_cost,ts:Date.parse(r.created_at),usedTs:r.used_at?Date.parse(r.used_at):null};},
   potMembers:function(r){return {id:r.pot_id+':'+r.member_id,potId:r.pot_id,memberId:r.member_id,status:r.status,amount:r.amount};},
   potRewards:function(r){return {id:r.id,potId:r.pot_id,label:r.label,cost:r.cost,ts:Date.parse(r.created_at)};},
-  events:function(r){return {id:r.id,taskId:r.task_id||null,title:r.title,day:r.day,time:r.start_time?String(r.start_time).slice(0,5):null,memberIds:r.member_ids||[],note:r.note||'',createdBy:r.created_by,ts:Date.parse(r.created_at)};},
+  events:function(r){return {id:r.id,taskId:r.task_id||null,title:r.title,day:r.day,time:r.start_time?String(r.start_time).slice(0,5):null,memberIds:r.member_ids||[],note:r.note||'',repeat:r.repeat||null,createdBy:r.created_by,ts:Date.parse(r.created_at)};},
   family:function(r){return {id:'main',code:r.code};}
 };
 function dbErr(r){ if(r&&r.error) throw r.error; return r; }
