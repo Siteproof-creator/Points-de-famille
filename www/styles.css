@@ -516,5 +516,25 @@ input:focus,select:focus{outline:0;border-color:var(--accent)}
 /* barre d'onglets : le nom de l'onglet actif passe sous l'icône, rien ne bouge */
 .tabs .tab,.tabs .tab[aria-current="page"]{flex:1!important;min-width:0}
 .tabs .tab[aria-current="page"]{flex-direction:column;gap:2px;justify-content:center}
-.tabs .tab[aria-current="page"] span:not(.badge){display:block;font-size:9.5px;letter-spacing:-.03em;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs .tab[aria-current="page"] span:not(.badge):not(.calbtn){display:block;font-size:9.5px;letter-spacing:-.03em;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tab.cal,.tab.cal[aria-current="page"]{flex:1!important;flex-direction:column;gap:0;justify-content:center;padding-top:0;padding-bottom:0;background:none;box-shadow:none}
+
+/* ===== corrections téléphone : plus rien ne dépasse de l'écran ===== */
+html,body{overflow-x:hidden;max-width:100%}
+.card,.sheet,.list>li{min-width:0}
+.chips2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pc{min-width:0;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'a n s' 'a p s'}
+.pc>span,.pc b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc small{position:static;grid-area:s;align-self:start}
+.calgrid{grid-template-columns:repeat(7,minmax(0,1fr))}
+.calgrid .day{min-height:0;width:100%;max-width:46px;justify-self:center;aspect-ratio:1;padding:0;justify-content:center;gap:1px}
+.calfoot{flex-wrap:wrap;gap:8px}
+.calfoot .btn{min-height:40px;padding:0 14px}
+.section-title h3{flex:none;white-space:nowrap}
+.section-title .muted{min-width:0;text-align:right;font-size:12px}
+/* le bouton Planning garde son icône bien centrée */
+.tab.cal .calbtn{display:flex!important;align-items:center;justify-content:center;font-size:inherit;line-height:1;overflow:visible}
+.tabs .tab[aria-current="page"] span.calbtn{display:flex!important}
+.pc{grid-template-columns:auto minmax(0,1fr);grid-template-areas:'a n' 'a p';column-gap:9px;padding:10px 12px}
+.pc .avatar{width:40px;height:40px}
+.pc small{grid-area:p;justify-self:end;align-self:center}
