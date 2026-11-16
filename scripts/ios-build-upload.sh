@@ -10,9 +10,12 @@ if [ -d ios/App/App.xcworkspace ]; then CONTAINER=(-workspace ios/App/App.xcwork
 AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
 
 mkdir -p build
+# 1) Archive SANS signature : évite l'erreur « no devices » (Apple veut un iPhone enregistré pour signer en développement).
+#    La signature de distribution se fait à l'étape 2, avec la clé API (aucun appareil nécessaire).
 xcodebuild archive "${CONTAINER[@]}" -scheme App -configuration Release \
-  -destination 'generic/platform=iOS' -archivePath build/App.xcarchive "${AUTH[@]}" \
-  DEVELOPMENT_TEAM="$APPLE_TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" CODE_SIGN_STYLE=Automatic \
+  -destination 'generic/platform=iOS' -archivePath build/App.xcarchive \
+  DEVELOPMENT_TEAM="$APPLE_TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
   MARKETING_VERSION="${APP_VERSION:-1.0}" CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER:-1}"
 
 cat > build/ExportOptions.plist <<PLIST
