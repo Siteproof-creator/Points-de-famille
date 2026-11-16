@@ -1,0 +1,53 @@
+name: iOS - envoyer sur TestFlight
+
+# À lancer à la main : onglet Actions > « iOS - envoyer sur TestFlight » > Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Numéro de version affiché dans l'App Store (ex. 1.0)"
+        default: "1.0"
+        required: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Choisir la dernière version d'Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Préparer le site (bibliothèques et polices)
+        run: |
+          npm install --no-audit --no-fund
+          npm run vendor
+
+      - name: Créer le projet iOS
+        run: |
+          npx cap add ios
+          bash scripts/ios-prepare.sh
+          npx cap sync ios
+
+      - name: Enregistrer la clé App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/private_keys"
+          printf '%s' "$ASC_KEY_P8" > "$HOME/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Construire et envoyer
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_VERSION: ${{ inputs.version }}
+        run: bash scripts/ios-build-upload.sh
