@@ -12,9 +12,12 @@ AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKey
 mkdir -p build
 # 1) Archive SANS signature : évite l'erreur « no devices » (Apple veut un iPhone enregistré pour signer en développement).
 #    La signature de distribution se fait à l'étape 2, avec la clé API (aucun appareil nécessaire).
+#    NE PAS imposer PRODUCT_BUNDLE_IDENTIFIER ici : ça l'appliquerait aussi aux modules (Capacitor, etc.)
+#    et provoquerait « CFBundleIdentifier Collision ». L'identifiant de l'app vient déjà de capacitor.config.json.
+echo "Identifiant attendu : $BUNDLE_ID"; grep -n "PRODUCT_BUNDLE_IDENTIFIER" ios/App/App.xcodeproj/project.pbxproj || true
 xcodebuild archive "${CONTAINER[@]}" -scheme App -configuration Release \
   -destination 'generic/platform=iOS' -archivePath build/App.xcarchive \
-  DEVELOPMENT_TEAM="$APPLE_TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+  DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
   MARKETING_VERSION="${APP_VERSION:-1.0}" CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER:-1}"
 
