@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Règle le projet iOS créé par « npx cap add ios » : icône, textes de permission, iPhone en portrait.
+# Règle le projet iOS créé par « npx cap add ios » : icône, textes de permission, iPhone en portrait, iPad compatible.
 # À lancer sur un Mac (GitHub Actions le fait pour toi).
 set -euo pipefail
 
@@ -23,6 +23,14 @@ pb "Delete :UISupportedInterfaceOrientations"
 pb "Add :UISupportedInterfaceOrientations array"
 pb "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait"
 
-# iPhone seulement (pas de captures d'écran iPad à fournir)
-sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' "$APP_DIR/App.xcodeproj/project.pbxproj"
+# iPad : toutes les orientations (exigé par Apple pour une app iPad)
+pb "Delete :UISupportedInterfaceOrientations~ipad"
+pb "Add :UISupportedInterfaceOrientations~ipad array"
+pb "Add :UISupportedInterfaceOrientations~ipad:0 string UIInterfaceOrientationPortrait"
+pb "Add :UISupportedInterfaceOrientations~ipad:1 string UIInterfaceOrientationPortraitUpsideDown"
+pb "Add :UISupportedInterfaceOrientations~ipad:2 string UIInterfaceOrientationLandscapeLeft"
+pb "Add :UISupportedInterfaceOrientations~ipad:3 string UIInterfaceOrientationLandscapeRight"
+
+# iPhone + iPad
+sed -i '' 's/TARGETED_DEVICE_FAMILY = 1;/TARGETED_DEVICE_FAMILY = "1,2";/g' "$APP_DIR/App.xcodeproj/project.pbxproj"
 echo "Projet iOS préparé."
