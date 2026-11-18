@@ -546,5 +546,6 @@ html,body{overflow-x:hidden;max-width:100%}
 .topbar .avatar{box-shadow:0 0 0 3px var(--accent)!important}
 
 /* Fiches (profil, récompense…) : ne montent plus sous l'heure et la batterie, la croix reste accessible */
-.sheet{max-height:calc(100% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 64px)!important}
+.sheet{max-height:76%!important}
+@supports (height:1dvh){.sheet{max-height:76dvh!important}}
 .sheet .close{position:sticky!important;top:0!important;float:right;margin:-8px -4px 0 8px;z-index:3}
