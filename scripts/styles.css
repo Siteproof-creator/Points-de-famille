@@ -544,3 +544,7 @@ html,body{overflow-x:hidden;max-width:100%}
 /* Bandeau du haut : fond plein, ne recouvre plus le début du contenu (iPad et iPhone) */
 .topbar{background:var(--bg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;-webkit-mask-image:none!important;mask-image:none!important;margin-bottom:10px!important;padding-top:10px!important;padding-bottom:12px!important;border-radius:0!important;box-shadow:0 8px 10px -8px rgba(0,0,0,.12)!important}
 .topbar .avatar{box-shadow:0 0 0 3px var(--accent)!important}
+
+/* Fiches (profil, récompense…) : ne montent plus sous l'heure et la batterie, la croix reste accessible */
+.sheet{max-height:calc(100% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 64px)!important}
+.sheet .close{position:sticky!important;top:0!important;float:right;margin:-8px -4px 0 8px;z-index:3}
